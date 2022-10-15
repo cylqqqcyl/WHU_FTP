@@ -5,7 +5,7 @@ developing platform:
 >Lang:python 3.9
 
 ## Prerequisites 
-install pyftpdlib
+install pyftpdlib(optional)
 ```bash
 pip install pyftpdlib
 pip install PyOpenSSL
