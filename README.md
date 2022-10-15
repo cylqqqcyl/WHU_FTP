@@ -9,7 +9,6 @@ install pyftpdlib
 ```bash
 pip install pyftpdlib
 pip install PyOpenSSL
-pip install pysendfile
 ```
 install qt for python
 ```bash
