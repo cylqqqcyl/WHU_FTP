@@ -1,12 +1,12 @@
-# 该脚本程序是运行在windows上的ftp，运行前需要安装pyftpdlib模块， pip3 install pyftpdlib
-# 修改filesystems.py文件，将503 行的 "utf-8"修改成"gbk"（windows支持的gbk类型的bytes）即 yield line.encode('gbk', self.cmd_channel.unicode_errors
-# 修改 handlers.py 文件，将1413行的"utf-8"修改成"gbk"（windows支持的gbk类型的bytes）即 return bytes.decode('gbk', self.unicode_errors)
-
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler,ThrottledDTPHandler
 from pyftpdlib.servers import FTPServer
 from pyftpdlib.log import LogFormatter
 import logging
+import os
+
+cur_dir = __file__.strip('src\\admin.py')
+user_dir = cur_dir+"\\user_dir"
 
 # 1.记录日志输出到文件和终端
 logger = logging.getLogger('FTP-LOG')
@@ -31,10 +31,24 @@ logger.addHandler(fs)
 authorizer = DummyAuthorizer()
 
 # 3.添加用户权限和路径，括号内的参数是(用户名、密码、用户目录、权限)，可以为不同的用户添加不同的目录和权限
-authorizer.add_user('user', '123456', "d:/", perm="elradfmw")
+authorizer.add_user('user', '123456', user_dir, perm="elradfmw")
+'''
+1、读权限：
+e ：改变文件目录
+l ：列出文件
+r ：从服务器接收文件
+2、写权限
+a ：文件上传
+d ：删除文件
+f ：文件重命名
+m ：创建文件
+w ：写权限
+M：文件传输模式（通过FTP设置文件权限）
+
+'''
 
 # 4.添加匿名用户，只需要路径
-authorizer.add_anonymous("d:/")
+authorizer.add_anonymous(user_dir)
 
 # 5.初始化ftp句柄
 handler = FTPHandler
