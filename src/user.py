@@ -1,7 +1,8 @@
 from ftplib import FTP
 import datetime
+import argparse
 
-def ftpconnect(host, username, password):
+def ftpconnect(host, username='', password=''):
     ftp = FTP()
     ftp.set_debuglevel(2)
     ftp.connect(host,21) #填自己服务的端口号 一般是21
@@ -27,13 +28,30 @@ def uploadfile(ftp, localpath, remotepath):
     ftp.set_debuglevel(0)
     fp.close()
 
-if __name__ == "__main__":
-    cur_dir = __file__.strip('src\\user.py')
-    local_dir = cur_dir + "\\local_Dir"
 
-    ftp = ftpconnect("192.168.3.202", "user", "123456")
-    local_file = local_dir+"\\local.txt"
-    target_file = 'local.txt'
-    uploadfile(ftp, local_file, target_file)
-    downloadfile(ftp, "test.txt",local_dir+"\\test.txt")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, default="192.168.3.202", help="host")
+    parser.add_argument("--username", type=str, default="", help="username")
+    parser.add_argument("--password", type=str, default="", help="password")
+    parser.add_argument("--mode", type=str, required=True, help="upload or download")
+    parser.add_argument("--localpath", type=str, required=True, help="local file path")
+    parser.add_argument("--remotepath", type=str, required=True, help="remote file path")
+
+    args = parser.parse_args()
+
+    ftp = ftpconnect(args.host, args.username, args.password)
+    print(args.mode)
+    if args.mode == "upload":
+        uploadfile(ftp, args.localpath, args.remotepath)
+    elif args.mode == "download":
+        downloadfile(ftp, args.localpath, args.remotepath)
+    else:
+        raise ValueError("unsupported mode!\n"
+                         "upload: upload some file to the host\n"
+                         "download: download some file from the host")
+
     ftp.quit()
+
+if __name__ == "__main__":
+    main()
