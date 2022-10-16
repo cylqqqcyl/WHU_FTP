@@ -1,10 +1,11 @@
 {
-  "admin": {
-    "root_dir": "",
-    "log_path": "test.log",
-    "read_limit": 307200,
-    "write_limit": 307200,
-    "max_cons": 150,
-    "max_cons_per_ip": 15
-  }
+  "root_dir": "admin_root",
+  "public_dir": "admin_root/public",
+  "private_dir": "admin_root/private",
+  "anonymous_dir": "admin_root/anonymous",
+  "log_dir": "log",
+  "read_limit": 307200,
+  "write_limit": 307200,
+  "max_cons": 150,
+  "max_cons_per_ip": 15
 }
