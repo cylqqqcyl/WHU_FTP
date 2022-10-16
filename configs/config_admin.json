@@ -1,0 +1,10 @@
+{
+  "admin": {
+    "root_dir": "",
+    "log_path": "test.log",
+    "read_limit": 307200,
+    "write_limit": 307200,
+    "max_cons": 150,
+    "max_cons_per_ip": 15
+  }
+}
