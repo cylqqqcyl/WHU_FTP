@@ -3,6 +3,7 @@ from pyftpdlib.handlers import FTPHandler,ThrottledDTPHandler
 from pyftpdlib.servers import FTPServer
 from pyftpdlib.log import LogFormatter
 import logging
+import sqlite3
 import os
 
 class MyHandler(FTPHandler): # customized event handler
@@ -65,8 +66,34 @@ logger.addHandler(fs)
 # 2.实例化虚拟用户，这是FTP的首要条件
 authorizer = DummyAuthorizer()
 
+def load_user(authorizer): # 加载用户参数
+    conn = sqlite3.connect('user_info.db')
+    cursor = conn.cursor()
+    cursor.execute('select * from user')
+    user_info = cursor.fetchall()
+    for username, password in user_info:
+        authorizer.add_user(username, password, user_dir, perm="elradfmw")
+    cursor.close()
+    conn.close()
+
+def register(uname,password,authorizer): # 注册函数
+    uname = str(uname)
+    password = str(password)
+    assert len(uname)<21
+    assert len(password)<21
+    conn = sqlite3.connect('user_info.db')
+    cursor = conn.cursor()
+    try:
+        cursor.execute('insert into user(username,password) values("{}","{}")'.format(uname,password))
+    except Exception as e:
+        print(e)
+    else:
+        authorizer.add_user(uname, password, user_dir, perm="elradfmw")
+    cursor.close()
+    conn.commit()
+    conn.close()
 # 3.添加用户权限和路径，括号内的参数是(用户名、密码、用户目录、权限)，可以为不同的用户添加不同的目录和权限
-authorizer.add_user('user', '123456', user_dir, perm="elradfmw")
+
 '''
 1、读权限：
 e ：改变文件目录
@@ -81,7 +108,7 @@ w ：写权限
 M：文件传输模式（通过FTP设置文件权限）
 
 '''
-
+load_user(authorizer)
 # 4.添加匿名用户，只需要路径
 authorizer.add_anonymous(user_dir)
 

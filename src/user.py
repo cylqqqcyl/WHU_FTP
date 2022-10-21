@@ -31,7 +31,7 @@ def uploadfile(ftp, localpath, remotepath):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=str, default="192.168.3.202", help="host")
+    parser.add_argument("--host", type=str, default="172.27.240.1", help="host")
     parser.add_argument("--username", type=str, default="", help="username")
     parser.add_argument("--password", type=str, default="", help="password")
     parser.add_argument("--mode", type=str, required=True, help="upload or download")
