@@ -1,7 +1,7 @@
 # WHU_FTP
 An FTP server based on pyftpdlib and qt
 developing platform:
->OS:Windows
+>OS:Windows10
 >Lang:python 3.9
 
 ## Prerequisites 
