@@ -2,14 +2,16 @@ from ftplib import FTP
 import datetime
 import argparse
 
-def ftpconnect(host, username='', password=''):
+
+def ftpconnect(host, username='', password='', port=21):
     ftp = FTP()
     ftp.set_debuglevel(2)
-    ftp.connect(host,21) #填自己服务的端口号 一般是21
+    ftp.connect(host, port)  # 填自己服务的端口号 一般是21
     ftp.login(username, password)
-    ftp.set_pasv(False) #主动模式
+    ftp.set_pasv(False)  # 主动模式
     print(ftp.getwelcome())
     return ftp
+
 
 def downloadfile(ftp, remotepath, localpath):
     # 从ftp下载文件
@@ -29,7 +31,7 @@ def uploadfile(ftp, localpath, remotepath):
     fp.close()
 
 
-def main():
+def main():  # for debugging?
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="172.27.240.1", help="host")
     parser.add_argument("--username", type=str, default="", help="username")
@@ -52,6 +54,7 @@ def main():
                          "download: download some file from the host")
 
     ftp.quit()
+
 
 if __name__ == "__main__":
     main()
