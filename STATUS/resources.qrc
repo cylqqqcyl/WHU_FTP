@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="common">
+    <file>logo.ico</file>
+    <file>megumi1.jpg</file>
+  </qresource>
+</RCC>
