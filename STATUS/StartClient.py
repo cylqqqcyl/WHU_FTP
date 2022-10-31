@@ -158,7 +158,7 @@ class Stats:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
             self.ui.serverLbl.setText('远程目录列表：')
 
-        except Exception as e:
+        except:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
             # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
