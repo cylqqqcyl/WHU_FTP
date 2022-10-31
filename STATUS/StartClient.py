@@ -1,3 +1,5 @@
+import threading
+
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWidgets import *
 # from PySide2.QtUiTools import QUiLoader
@@ -136,6 +138,12 @@ class Stats:
         self.loginWin.close()
 
     def connect_server(self):
+        # 注册线程来连接服务器，防止服务器未开启等情况时客户端卡死
+        thread = threading.Thread(target=self._connect_server)
+        thread.setDaemon(True)
+        thread.start()
+
+    def _connect_server(self):
         self.ui.serverLbl.setText('远程目录列表（连接中……）：')
         try:
             self.ftpserver = user.ftpconnect(
@@ -143,15 +151,17 @@ class Stats:
                 username=self.ui.nameEdit.text(),
                 password=self.ui.pwEdit.text(),
                 port=int(self.ui.portEdit.text()))
+
             self.server_root = '../user_dir'  # 感觉不是很合理……
             self.modelt2.setRootPath(self.server_root)
             self.ui.treeView_2.setRootIndex(self.modelt2.index(self.server_root))
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
             self.ui.serverLbl.setText('远程目录列表：')
+
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
-            QMessageBox.warning(self.ui, '警告', f'''{e}''')
+            # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
 
 
 app = QApplication([])

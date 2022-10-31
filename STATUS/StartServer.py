@@ -96,7 +96,7 @@ class Server:
     def add_user(self):
         # modification is needed
         self.addUserWin.show()
-        
+
     # 确认添加用户
     def confirm_add_user(self):
         pass
