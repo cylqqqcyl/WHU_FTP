@@ -69,6 +69,7 @@ class Stats:
     def __init__(self):
         # 从文件中加载UI定义
         self.ftpserver = None  # 所连接到的服务器实例
+        self.current_remote_dir = None  # 当前服务器目录
         qfile_stats = QFile("client.ui")
         qfile_stats.open(QFile.ReadOnly)
         qfile_stats.close()
@@ -99,12 +100,12 @@ class Stats:
 
         # Qt的文件模型似乎只能显示本机的文件系统
         self.server_root = ''  # 服务器端的文件目录。客户端初始化时为空，用户登录后显示
-        self.modelt2 = QFileSystemModel()
+        # self.modelt2 = QTreeWidget()
         ####################################################
         # 成功连接后再显示远程目录，而非初始化客户端时
         # self.modelt2.setRootPath(self.server_root)  ##<-这里后续修改Path值#
         ####################################################
-        self.ui.treeView_2.setModel(self.modelt2)
+        # self.ui.treeView_2.setModel(self.modelt2)
         # self.ui.treeView_2.setRootIndex(self.modelt2.index(self.server_root))  # 只显示设置的那个文件路径。
         self.ui.treeView_2.doubleClicked.connect(self.file_name)  # 双击文件打开
 
@@ -151,12 +152,15 @@ class Stats:
                 username=self.ui.nameEdit.text(),
                 password=self.ui.pwEdit.text(),
                 port=int(self.ui.portEdit.text()))
-
-            self.server_root = '../user_dir'  # 感觉不是很合理……
-            self.modelt2.setRootPath(self.server_root)
-            self.ui.treeView_2.setRootIndex(self.modelt2.index(self.server_root))
+            self.current_remote_dir = self.ftpserver.pwd()
+            self.ui.treeView_2.addTopLevelItem(QTreeWidgetItem(["..", "  ", "  "," "]))
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
             self.ui.serverLbl.setText('远程目录列表：')
+
+            root_files = user.get_server_files(self.ftpserver)
+            for file in root_files:
+                self.ui.treeView_2.addTopLevelItem(QTreeWidgetItem(file))
+
 
         except:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")

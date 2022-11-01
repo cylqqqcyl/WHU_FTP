@@ -133,7 +133,8 @@ class Ui_MainWindow(object):
 "background-color: rgba(128, 128, 128, 200);")
         self.serverLbl.setObjectName("serverLbl")
         self.verticalLayout_4.addWidget(self.serverLbl)
-        self.treeView_2 = QtWidgets.QTreeView(self.frame)
+        self.treeView_2 = QtWidgets.QTreeWidget(self.frame)  # 远程服务器目录换为QTreeWidget
+        self.treeView_2.setHeaderLabels(['Name','Size','Type','Date Modified'])
         self.treeView_2.setStyleSheet("background-color: rgba(255, 255, 255, 200);")
         self.treeView_2.setObjectName("treeView_2")
         self.verticalLayout_4.addWidget(self.treeView_2)
