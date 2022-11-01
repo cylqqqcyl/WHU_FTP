@@ -1,12 +1,13 @@
 from pyftpdlib.authorizers import DummyAuthorizer
-from pyftpdlib.handlers import FTPHandler,ThrottledDTPHandler
+from pyftpdlib.handlers import FTPHandler, ThrottledDTPHandler
 from pyftpdlib.servers import FTPServer
 from pyftpdlib.log import LogFormatter
 import logging
 import sqlite3
 import os
 
-class MyHandler(FTPHandler): # customized event handler
+
+class MyHandler(FTPHandler):  # customized event handler
 
     def on_connect(self):
         print("%s:%s connected" % (self.remote_ip, self.remote_port))
@@ -42,7 +43,7 @@ class MyHandler(FTPHandler): # customized event handler
 
 
 cur_dir = __file__.strip('src\\admin.py')
-user_dir = cur_dir+"\\user_dir"
+user_dir = cur_dir + "\\user_dir"
 
 # 1.记录日志输出到文件和终端
 logger = logging.getLogger('FTP-LOG')
@@ -62,11 +63,11 @@ fs.setFormatter(formatter)
 logger.addHandler(cs)
 logger.addHandler(fs)
 
-
 # 2.实例化虚拟用户，这是FTP的首要条件
 authorizer = DummyAuthorizer()
 
-def load_user(authorizer): # 加载用户参数
+
+def load_user(authorizer):  # 加载用户参数
     conn = sqlite3.connect('user_info.db')
     cursor = conn.cursor()
     cursor.execute('select * from user')
@@ -76,15 +77,16 @@ def load_user(authorizer): # 加载用户参数
     cursor.close()
     conn.close()
 
-def register(uname,password,authorizer): # 注册函数
+
+def register(uname, password, authorizer):  # 注册函数
     uname = str(uname)
     password = str(password)
-    assert len(uname)<21
-    assert len(password)<21
+    assert len(uname) < 21
+    assert len(password) < 21
     conn = sqlite3.connect('user_info.db')
     cursor = conn.cursor()
     try:
-        cursor.execute('insert into user(username,password) values("{}","{}")'.format(uname,password))
+        cursor.execute('insert into user(username,password) values("{}","{}")'.format(uname, password))
     except Exception as e:
         print(e)
     else:
@@ -92,6 +94,8 @@ def register(uname,password,authorizer): # 注册函数
     cursor.close()
     conn.commit()
     conn.close()
+
+
 # 3.添加用户权限和路径，括号内的参数是(用户名、密码、用户目录、权限)，可以为不同的用户添加不同的目录和权限
 
 '''
@@ -117,12 +121,12 @@ handler = FTPHandler
 handler.authorizer = authorizer
 
 # 6.添加被动端口范围
-handler.passive_ports = range(2000,20033)
+handler.passive_ports = range(2000, 20033)
 
 # 7.上传下载的速度设置
 dtp_handler = ThrottledDTPHandler
-dtp_handler.read_limit = 300 * 1024          # 300 kb/s
-dtp_handler.write_limit = 300 * 1024         # 300 kb/s
+dtp_handler.read_limit = 300 * 1024  # 300 kb/s
+dtp_handler.write_limit = 300 * 1024  # 300 kb/s
 handler.dtp_handler = dtp_handler
 
 # 8.监听ip和端口 ， linux里需要root用户才能使用21端口
@@ -134,4 +138,3 @@ server.max_cons_per_ip = 15
 
 # 10.开始服务，自带打印日志信息
 server.serve_forever()
-
