@@ -159,7 +159,14 @@ class Stats:
 
             root_files = user.get_server_files(self.ftpserver)
             for file in root_files:
-                self.ui.treeView_2.addTopLevelItem(QTreeWidgetItem(file))
+                file_item = QTreeWidgetItem(file)
+                if file[-2] == 'file':
+                    file_item.setIcon(0,QIcon('/resources/common/file.png')) #未成功
+                elif file[-2] == 'dir':
+                    file_item.setIcon(0, QIcon('/resources/common/directory.png')) #未成功
+                else:
+                    pass
+                self.ui.treeView_2.addTopLevelItem(file_item)
 
 
         except:
