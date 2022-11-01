@@ -70,7 +70,10 @@ authorizer = DummyAuthorizer()
 def load_user(authorizer):  # 加载用户参数
     conn = sqlite3.connect('user_info.db')
     cursor = conn.cursor()
-    cursor.execute('select * from user')
+    try:
+        cursor.execute('select * from user')
+    except sqlite3.OperationalError:
+        cursor.execute('create table user(username char(20),password char(20))')
     user_info = cursor.fetchall()
     for username, password in user_info:
         authorizer.add_user(username, password, user_dir, perm="elradfmw")
