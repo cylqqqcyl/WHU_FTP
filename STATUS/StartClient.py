@@ -145,6 +145,7 @@ class Stats:
         thread.start()
 
     def _connect_server(self):
+        self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
         self.ui.serverLbl.setText('远程目录列表（连接中……）：')
         try:
             self.ftpserver = user.ftpconnect(
@@ -161,13 +162,12 @@ class Stats:
             for file in root_files:
                 file_item = QTreeWidgetItem(file)
                 if file[-2] == 'file':
-                    file_item.setIcon(0,QIcon('/resources/common/file.png')) #未成功
+                    file_item.setIcon(0, QIcon('/resources/common/file.png')) #未成功
                 elif file[-2] == 'dir':
                     file_item.setIcon(0, QIcon('/resources/common/directory.png')) #未成功
                 else:
                     pass
                 self.ui.treeView_2.addTopLevelItem(file_item)
-
 
         except:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")

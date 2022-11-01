@@ -547,8 +547,21 @@ color: rgb(255, 255, 255);</string>
         <property name="bottomMargin">
          <number>10</number>
         </property>
-        <item row="0" column="0" colspan="2">
-         <widget class="QTableWidget" name="tableWidget">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="addUserBtn">
+          <property name="font">
+           <font>
+            <family>微软雅黑</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>添加</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="3">
+         <widget class="QTableWidget" name="userTbl">
           <property name="font">
            <font>
             <family>微软雅黑</family>
@@ -557,6 +570,9 @@ color: rgb(255, 255, 255);</string>
           </property>
           <property name="styleSheet">
            <string notr="true">background-color: rgba(255, 255, 255, 100);</string>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
           </property>
           <property name="columnCount">
            <number>4</number>
@@ -576,7 +592,7 @@ color: rgb(255, 255, 255);</string>
           </column>
           <column>
            <property name="text">
-            <string>状态</string>
+            <string>权限</string>
            </property>
           </column>
           <column>
@@ -586,20 +602,7 @@ color: rgb(255, 255, 255);</string>
           </column>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="addUserBtn">
-          <property name="font">
-           <font>
-            <family>微软雅黑</family>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>添加</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
+        <item row="1" column="2">
          <widget class="QPushButton" name="delUserBtn">
           <property name="font">
            <font>
@@ -609,6 +612,13 @@ color: rgb(255, 255, 255);</string>
           </property>
           <property name="text">
            <string>删除</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="updateBtn">
+          <property name="text">
+           <string>刷新</string>
           </property>
          </widget>
         </item>

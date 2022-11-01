@@ -1,6 +1,5 @@
 import os
 import threading
-
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -27,13 +26,16 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
     def __init__(self, parent=None):
         super(ServerUI, self).__init__(parent)
 
+        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+
         self.setupUi(self)
 
         # debug use
         self.nameEdit.setText('whuftp')
         self.addressEdit.setText('172.16.20.195')
         self.portEdit.setText('21')
-        self.rootEdit.setText('../WHU_FTP/user_dir')
+        self.rootEdit.setText('../user_dir')
         self.dbEdit.setText('../src/user_info.db')
         self.maxconEdit.setText('150')
         self.maxconipEdit.setText('15')
@@ -57,6 +59,9 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         if db_path[0]:
             self.dbEdit.setText(db_path[0])
 
+
+
+
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
                                      '询问',
@@ -69,6 +74,14 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         else:
             e.ignore()
 
+    # 输出日志至text browser
+    def outputWriteInfo(self, text):
+        self.logBrowser.append(text)
+
+    def outputWriteError(self, text):
+        # 错误信息用红色输出
+        self.logBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
+
 
 class Server:
     def __init__(self):
@@ -77,8 +90,7 @@ class Server:
         self.mainWin = ServerUI()
         self.addUserWin = AddUserWin()
 
-        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
-        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+
 
         self.model = QFileSystemModel()
         self.mainWin.treeView.setModel(self.model)
@@ -93,6 +105,7 @@ class Server:
         self.mainWin.resetBtn.clicked.connect(self.reset_server)
 
         self.mainWin.addUserBtn.clicked.connect(self.add_user)
+        self.mainWin.updateBtn.clicked.connect(self.update_user_list)
         self.mainWin.delUserBtn.clicked.connect(self.delete_user)
         self.addUserWin.addUserBtn.clicked.connect(self.confirm_add_user)
 
@@ -109,16 +122,16 @@ class Server:
             db_path = self.mainWin.dbEdit.text()
             max_cons = self.mainWin.maxconEdit.text()
             max_cons_per_ip = self.mainWin.maxconipEdit.text()
-            read_limit = self.mainWin.readlimEdit.text() * 1024  # GUI上填写的时KB/s
-            write_limit = self.mainWin.writelimEdit.text() * 1024
+            read_limit = self.mainWin.readlimEdit.text()
+            write_limit = self.mainWin.writelimEdit.text()
 
             # NOTE: 避免invalid literal for int() with base 10而卡死
             try:
                 port = int(port)
                 max_cons = int(max_cons)
                 max_cons_per_ip = int(max_cons_per_ip)
-                read_limit = int(read_limit)
-                write_limit = int(write_limit)
+                read_limit = int(read_limit) * 1024  # GUI上填写的时KB/s
+                write_limit = int(write_limit) * 1024
 
                 self.server = WHUFTPServer(
                     address, port,
@@ -200,30 +213,100 @@ class Server:
         self.mainWin.stateLbl.setText('状态：未创建')
 
 
+    def update_user_list(self):
+        if self.server:
+            try:
+                self.mainWin.userTbl.setRowCount(0)
+                self.mainWin.userTbl.clearContents()
+                user_info = self.server.authorizer.user_table
+                for row, item in enumerate(user_info.items()):
+                    username = item[0]
+                    password = item[1]['pwd']
+                    permission = item[1]['perm']
+                    self.mainWin.userTbl.insertRow(row)
+                    self.mainWin.userTbl.setItem(row, 0, QTableWidgetItem(username))
+                    self.mainWin.userTbl.setItem(row, 1, QTableWidgetItem(password))
+                    self.mainWin.userTbl.setItem(row, 2, QTableWidgetItem(permission))
+            except Exception as e:
+                print(e)
+        else:
+            QMessageBox.warning(self.mainWin,
+                                '警告',
+                                '请先打开服务器！')
+
+
     # 添加用户
     def add_user(self):
         # modification is needed
-        self.addUserWin.show()
+        if self.server:
+            self.addUserWin.show()
+        else:
+            QMessageBox.warning(self.mainWin,
+                                '警告',
+                                '请先打开服务器！')
 
     # 确认添加用户
     def confirm_add_user(self):
-        pass
+        # TODO: 赋予不同权限
+        username = self.addUserWin.nameEdit.text()
+        password = self.addUserWin.passwordEdit.text()
+        if self.server and username and password:
+            try:
+                self.server.register(username, password)
+            except Exception as e:
+                print(e)
+            else:
+                print(f'Successfully add user {username}!')
+                self.addUserWin.close()
+
+
+    def get_selected_user(self):
+        row = self.mainWin.userTbl.currentIndex().row()
+        username = self.mainWin.userTbl.item(row, 0).text()
+        print(username)
+        # password = self.mainWin.userTbl.item(row, 2).text()
+        # permission = self.mainWin.userTbl.item(row, 3).text()
+
+        return  username
 
     # 删除用户
     def delete_user(self):
-        pass
+        if self.server:
+            try:
+                username = self.get_selected_user()
+            except Exception as e:
+                print(e)
+            else:
+                reply = QMessageBox.question(self.mainWin,
+                                             '询问',
+                                             f'确定要删除用户{username}吗？',
+                                             QMessageBox.Yes | QMessageBox.No,
+                                             QMessageBox.No
+                                             )
+                if reply == QMessageBox.Yes:
+                    try:
+                        self.server.authorizer.remove_user(username)
+                        user_dir =  os.path.join(self.server.root_dir, username)
+                        # NOTE: 删除用户文件（optional）
+                        # 直接这么删除有问题，会报错[WinError 5] 拒绝访问。暂时为解决
+                        # if os.path.exists(user_dir):
+                        #     os.remove(user_dir)
+                        print(f'Successfully removed user {username}!')
+                        self.update_user_list()
+                    except Exception as e:
+                        print(e)
+                else:
+                    pass
+        else:
+            QMessageBox.warning(self.mainWin,
+                                '警告',
+                                '请先打开服务器！')
+
 
     def file_name(self, Qmodelidx):
         print(self.model.filePath(Qmodelidx))  # 输出文件的地址。
         print(self.model.fileName(Qmodelidx))  # 输出文件名
 
-    # 输出日志至text browser
-    def outputWriteInfo(self, text):
-        self.mainWin.logBrowser.append(text)
-
-    def outputWriteError(self, text):
-        # 错误信息用红色输出
-        self.mainWin.logBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
 
 
 if __name__ == '__main__':
