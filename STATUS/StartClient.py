@@ -159,13 +159,17 @@ class Stats:
             self.ui.serverLbl.setText('远程目录列表：')
 
             root_files = user.get_server_files(self.ftpserver)
-            for file in root_files:
+            cur_dir = os.getcwd()
+            arrow_off = QIcon()
+            arrow_off_path = os.path.join(cur_dir, 'resources/common/arrow-off.png')
+            for name, size, type, date in root_files:
+                # file = [' ', name, size, type, date]
+                file = [name, size, type, date]
                 file_item = QTreeWidgetItem(file)
                 icon = QIcon()
-                cur_dir = os.getcwd()
+
                 if file[-2] == 'file':
                     icon_path = os.path.join(cur_dir, 'resources/common/text.png')
-
                 elif file[-2] == 'dir':
                     icon_path = os.path.join(cur_dir, 'resources/common/directory.png')
                 else:
@@ -175,6 +179,9 @@ class Stats:
                 icon.addPixmap(QPixmap(icon_path))
                 file_item.setIcon(0, icon)
                 self.ui.treeWidget.addTopLevelItem(file_item)
+                self.ui.treeWidget.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+                # self.ui.treeView.setColumnWidth(0, 20)
+                self.ui.treeWidget.setItemsExpandable(True)
 
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
