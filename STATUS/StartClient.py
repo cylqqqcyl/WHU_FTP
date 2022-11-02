@@ -29,7 +29,7 @@ class LoginWin(QDialog, Ui_loginForm):
 
         # an example
         self.sessionTbl.insertRow(0)
-        for col, text in enumerate(['whuftp', 'user1', 'FTP', '21', '172.16.20.1', '123456']):
+        for col, text in enumerate(['whuftp', 'Francis', 'FTP', '21', '172.16.20.239', '123456']):
             self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
 
         self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
@@ -107,7 +107,7 @@ class Stats:
         ####################################################
         # self.ui.treeView_2.setModel(self.modelt2)
         # self.ui.treeView_2.setRootIndex(self.modelt2.index(self.server_root))  # 只显示设置的那个文件路径。
-        self.ui.treeView_2.doubleClicked.connect(self.file_name)  # 双击文件打开
+        # self.ui.treeView_2.doubleClicked.connect(self.file_name)  # 双击文件打开
 
     def upload(self):
         QMessageBox.about(
@@ -154,24 +154,39 @@ class Stats:
                 password=self.ui.pwEdit.text(),
                 port=int(self.ui.portEdit.text()))
             self.current_remote_dir = self.ftpserver.pwd()
-            self.ui.treeView_2.addTopLevelItem(QTreeWidgetItem(["..", "  ", "  "," "]))
+
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
             self.ui.serverLbl.setText('远程目录列表：')
 
             root_files = user.get_server_files(self.ftpserver)
-            for file in root_files:
+            cur_dir = os.getcwd()
+            arrow_off = QIcon()
+            arrow_off_path = os.path.join(cur_dir, 'resources/common/arrow-off.png')
+            for name, size, type, date in root_files:
+                # file = [' ', name, size, type, date]
+                file = [name, size, type, date]
                 file_item = QTreeWidgetItem(file)
-                if file[-2] == 'file':
-                    file_item.setIcon(0, QIcon('/resources/common/file.png')) #未成功
-                elif file[-2] == 'dir':
-                    file_item.setIcon(0, QIcon('/resources/common/directory.png')) #未成功
-                else:
-                    pass
-                self.ui.treeView_2.addTopLevelItem(file_item)
+                icon = QIcon()
 
-        except:
+                if file[-2] == 'file':
+                    icon_path = os.path.join(cur_dir, 'resources/common/text.png')
+                elif file[-2] == 'dir':
+                    icon_path = os.path.join(cur_dir, 'resources/common/directory.png')
+                else:
+                    # unknown file type
+                    icon_path = os.path.join(cur_dir, 'resources/common/unknown.png')
+
+                icon.addPixmap(QPixmap(icon_path))
+                file_item.setIcon(0, icon)
+                self.ui.treeWidget.addTopLevelItem(file_item)
+                self.ui.treeWidget.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+                # self.ui.treeView.setColumnWidth(0, 20)
+                self.ui.treeWidget.setItemsExpandable(True)
+
+        except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
+            print(e)
             # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
 
 

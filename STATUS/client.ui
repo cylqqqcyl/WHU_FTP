@@ -218,10 +218,42 @@ background-color: rgba(128, 128, 128, 150);</string>
             </widget>
            </item>
            <item>
-            <widget class="QTreeView" name="treeView_2">
+            <widget class="QTreeWidget" name="treeWidget">
              <property name="styleSheet">
               <string notr="true">background-color: rgba(255, 255, 255, 200);</string>
              </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::ExtendedSelection</enum>
+             </property>
+             <property name="columnCount">
+              <number>4</number>
+             </property>
+             <attribute name="headerCascadingSectionResizes">
+              <bool>false</bool>
+             </attribute>
+             <attribute name="headerDefaultSectionSize">
+              <number>100</number>
+             </attribute>
+             <column>
+              <property name="text">
+               <string>Name</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Size</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Type</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Date Modified</string>
+              </property>
+             </column>
             </widget>
            </item>
           </layout>
