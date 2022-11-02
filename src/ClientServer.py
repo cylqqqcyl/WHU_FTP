@@ -75,19 +75,6 @@ class WHUFTPServer:
         cursor.close()
         conn.close()
 
-    # def get_user_info(self):
-    #     conn = sqlite3.connect(self.db_path)
-    #     cursor = conn.cursor()
-    #     try:
-    #         cursor.execute('select * from user')
-    #     except sqlite3.OperationalError:
-    #         cursor.execute('create table user(username char(20),password char(20))')
-    #     user_info = cursor.fetchall()
-    #     cursor.close()
-    #     conn.close()
-    #
-    #     return user_info
-
     def register(self, uname, password):  # 注册函数
         uname = str(uname)
         password = str(password)

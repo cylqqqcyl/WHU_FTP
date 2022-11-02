@@ -65,12 +65,13 @@ def get_server_files(ftp):
             file_name, meta = file_data
             # i.e directory, file or link, etc
             file_type = meta.get("type")
+            print(file_type)
             if file_type == "file":
                 # if it is a file, change type of transfer data to IMAGE/binary
                 ftp.voidcmd("TYPE I")
                 # get the file size in bytes
                 file_size = ftp.size(file_name)
-                # convert it to human readable format (i.e in 'KB', 'MB', etc)
+                # convert it to human-readable format (i.e in 'KB', 'MB', etc)
                 file_size = get_size_format(file_size)
             else:
                 # not a file, may be a directory or other types
