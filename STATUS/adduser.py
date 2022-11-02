@@ -9,12 +9,13 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-
+import resources
 
 class Ui_addUserForm(object):
     def setupUi(self, addUserForm):
         addUserForm.setObjectName("addUserForm")
-        addUserForm.resize(400, 404)
+        addUserForm.resize(400, 400)
+        addUserForm.setMinimumSize(QtCore.QSize(400, 400))
         font = QtGui.QFont()
         font.setFamily("微软雅黑")
         font.setPointSize(12)

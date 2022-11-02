@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="resources">
+    <file>common/bg-3.jpg</file>
+    <file>common/bg-2.jpg</file>
     <file>common/bg-server.png</file>
     <file>common/bg.jpg</file>
     <file>common/logo.ico</file>

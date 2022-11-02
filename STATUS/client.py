@@ -14,7 +14,8 @@ import resources
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(800, 588)
+        MainWindow.resize(900, 600)
+        MainWindow.setMinimumSize(QtCore.QSize(900, 600))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/resources/common/logo.ico"), QtGui.QIcon.Selected, QtGui.QIcon.On)
         MainWindow.setWindowIcon(icon)
@@ -42,7 +43,7 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.clientLbl.setFont(font)
         self.clientLbl.setStyleSheet("color: rgb(255, 255, 255);\n"
-"background-color: rgba(0, 170, 255, 200);")
+"background-color: rgba(0, 170, 255, 150);")
         self.clientLbl.setObjectName("clientLbl")
         self.verticalLayout.addWidget(self.clientLbl)
         self.treeView = QtWidgets.QTreeView(self.frame)
@@ -130,11 +131,10 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.serverLbl.setFont(font)
         self.serverLbl.setStyleSheet("color: rgb(255, 255, 255);\n"
-"background-color: rgba(128, 128, 128, 200);")
+"background-color: rgba(128, 128, 128, 150);")
         self.serverLbl.setObjectName("serverLbl")
         self.verticalLayout_4.addWidget(self.serverLbl)
-        self.treeView_2 = QtWidgets.QTreeWidget(self.frame)  # 远程服务器目录换为QTreeWidget
-        self.treeView_2.setHeaderLabels(['Name','Size','Type','Date Modified'])
+        self.treeView_2 = QtWidgets.QTreeView(self.frame)
         self.treeView_2.setStyleSheet("background-color: rgba(255, 255, 255, 200);")
         self.treeView_2.setObjectName("treeView_2")
         self.verticalLayout_4.addWidget(self.treeView_2)

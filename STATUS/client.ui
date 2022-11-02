@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>588</height>
+    <width>900</width>
+    <height>600</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>900</width>
+    <height>600</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>FTP Client</string>
@@ -51,7 +57,7 @@
              </property>
              <property name="styleSheet">
               <string notr="true">color: rgb(255, 255, 255);
-background-color: rgba(0, 170, 255, 200);</string>
+background-color: rgba(0, 170, 255, 150);</string>
              </property>
              <property name="text">
               <string>文件目录列表：</string>
@@ -201,7 +207,7 @@ background-color: rgba(0, 170, 255, 200);</string>
              </property>
              <property name="styleSheet">
               <string notr="true">color: rgb(255, 255, 255);
-background-color: rgba(128, 128, 128, 200);</string>
+background-color: rgba(128, 128, 128, 150);</string>
              </property>
              <property name="text">
               <string>远程目录列表（未连接）：</string>
