@@ -6,12 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>900</width>
     <height>604</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>900</width>
+    <height>600</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>FTP Server</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">#ServerWindow{border-image: url(:/resources/common/bg-2.jpg);}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -36,10 +45,13 @@
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true"/>
+       <string notr="true">background-color: rgba(255, 255, 255, 159);</string>
       </property>
       <property name="currentIndex">
        <number>0</number>
+      </property>
+      <property name="documentMode">
+       <bool>true</bool>
       </property>
       <widget class="QWidget" name="infoTab">
        <property name="font">
@@ -66,7 +78,7 @@
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">background-color: rgba(128, 128, 128, 200);
+           <string notr="true">background-color: rgba(128, 128, 128, 150);
 color: rgb(255, 255, 255);</string>
           </property>
           <property name="text">
@@ -114,6 +126,9 @@ color: rgb(255, 255, 255);</string>
               <pointsize>10</pointsize>
              </font>
             </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
+            </property>
             <property name="text">
              <string>名称：</string>
             </property>
@@ -149,6 +164,9 @@ color: rgb(255, 255, 255);</string>
               <pointsize>10</pointsize>
              </font>
             </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
+            </property>
             <property name="text">
              <string>地址：</string>
             </property>
@@ -183,6 +201,9 @@ color: rgb(255, 255, 255);</string>
               <family>微软雅黑</family>
               <pointsize>10</pointsize>
              </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
             </property>
             <property name="text">
              <string>端口：</string>
@@ -296,6 +317,9 @@ color: rgb(255, 255, 255);</string>
               <pointsize>10</pointsize>
              </font>
             </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
+            </property>
             <property name="text">
              <string>服务器最大连接数：</string>
             </property>
@@ -331,6 +355,9 @@ color: rgb(255, 255, 255);</string>
               <pointsize>10</pointsize>
              </font>
             </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
+            </property>
             <property name="text">
              <string>读文件限速（KB/s）：</string>
             </property>
@@ -354,6 +381,9 @@ color: rgb(255, 255, 255);</string>
               <pointsize>10</pointsize>
              </font>
             </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
+            </property>
             <property name="text">
              <string>IP最大连接数：</string>
             </property>
@@ -376,6 +406,9 @@ color: rgb(255, 255, 255);</string>
               <family>微软雅黑</family>
               <pointsize>10</pointsize>
              </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
             </property>
             <property name="text">
              <string>写文件限速（KB/s）：</string>
@@ -661,6 +694,8 @@ color: rgb(255, 255, 255);</string>
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources/resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

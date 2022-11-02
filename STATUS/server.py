@@ -9,12 +9,14 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-
+import resources
 
 class Ui_ServerWindow(object):
     def setupUi(self, ServerWindow):
         ServerWindow.setObjectName("ServerWindow")
-        ServerWindow.resize(800, 604)
+        ServerWindow.resize(900, 604)
+        ServerWindow.setMinimumSize(QtCore.QSize(900, 600))
+        ServerWindow.setStyleSheet("#ServerWindow{border-image: url(:/resources/common/bg-2.jpg);}")
         self.centralwidget = QtWidgets.QWidget(ServerWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
@@ -25,7 +27,8 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.tabWidget.setFont(font)
-        self.tabWidget.setStyleSheet("")
+        self.tabWidget.setStyleSheet("background-color: rgba(255, 255, 255, 159);")
+        self.tabWidget.setDocumentMode(True)
         self.tabWidget.setObjectName("tabWidget")
         self.infoTab = QtWidgets.QWidget()
         font = QtGui.QFont()
@@ -43,7 +46,7 @@ class Ui_ServerWindow(object):
         font.setBold(True)
         font.setWeight(75)
         self.stateLbl.setFont(font)
-        self.stateLbl.setStyleSheet("background-color: rgba(128, 128, 128, 200);\n"
+        self.stateLbl.setStyleSheet("background-color: rgba(128, 128, 128, 150);\n"
 "color: rgb(255, 255, 255);")
         self.stateLbl.setObjectName("stateLbl")
         self.verticalLayout.addWidget(self.stateLbl)
@@ -58,6 +61,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.nameLbl.setFont(font)
+        self.nameLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.nameLbl.setObjectName("nameLbl")
         self.gridLayout_6.addWidget(self.nameLbl, 0, 0, 1, 1)
         self.nameEdit = QtWidgets.QLineEdit(self.infoTab)
@@ -74,6 +78,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.addressLbl.setFont(font)
+        self.addressLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.addressLbl.setObjectName("addressLbl")
         self.gridLayout_6.addWidget(self.addressLbl, 1, 0, 1, 1)
         self.addressEdit = QtWidgets.QLineEdit(self.infoTab)
@@ -90,6 +95,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.portLbl.setFont(font)
+        self.portLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.portLbl.setObjectName("portLbl")
         self.gridLayout_6.addWidget(self.portLbl, 2, 0, 1, 1)
         self.portEdit = QtWidgets.QLineEdit(self.infoTab)
@@ -135,6 +141,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.maxconLbl.setFont(font)
+        self.maxconLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.maxconLbl.setObjectName("maxconLbl")
         self.gridLayout_2.addWidget(self.maxconLbl, 0, 0, 1, 1)
         self.maxconEdit = QtWidgets.QLineEdit(self.infoTab)
@@ -151,6 +158,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.readlimLbl.setFont(font)
+        self.readlimLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.readlimLbl.setObjectName("readlimLbl")
         self.gridLayout_2.addWidget(self.readlimLbl, 0, 2, 1, 1)
         self.readlimEdit = QtWidgets.QLineEdit(self.infoTab)
@@ -165,6 +173,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.maxconipLbl.setFont(font)
+        self.maxconipLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.maxconipLbl.setObjectName("maxconipLbl")
         self.gridLayout_2.addWidget(self.maxconipLbl, 1, 0, 1, 1)
         self.maxconipEdit = QtWidgets.QLineEdit(self.infoTab)
@@ -179,6 +188,7 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.writelimLbl.setFont(font)
+        self.writelimLbl.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.writelimLbl.setObjectName("writelimLbl")
         self.gridLayout_2.addWidget(self.writelimLbl, 1, 2, 1, 1)
         self.writelimEdit = QtWidgets.QLineEdit(self.infoTab)
