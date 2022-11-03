@@ -96,18 +96,25 @@ class Stats:
         # 为控件添加模式。
         self.ui.treeView.setModel(self.modelt)
         self.ui.treeView.setRootIndex(self.modelt.index(self.client_root))  # 只显示设置的那个文件路径。
+        self.ui.treeView.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.ui.treeView.doubleClicked.connect(self.file_name)  # 双击文件打开
 
-        # Qt的文件模型似乎只能显示本机的文件系统
-        self.server_root = ''  # 服务器端的文件目录。客户端初始化时为空，用户登录后显示
-        # self.modelt2 = QTreeWidget()
-        ####################################################
-        # 成功连接后再显示远程目录，而非初始化客户端时
-        # self.modelt2.setRootPath(self.server_root)  ##<-这里后续修改Path值#
-        ####################################################
-        # self.ui.treeView_2.setModel(self.modelt2)
-        # self.ui.treeView_2.setRootIndex(self.modelt2.index(self.server_root))  # 只显示设置的那个文件路径。
-        # self.ui.treeView_2.doubleClicked.connect(self.file_name)  # 双击文件打开
+        # 远程文件目录的icon
+        cur_dir = os.getcwd()
+        icon_dir_path = os.path.join(cur_dir, 'resources/common/directory.png')
+        icon_file_path = os.path.join(cur_dir, 'resources/common/text.png')
+        icon_ukn_path = os.path.join(cur_dir, 'resources/common/unknown.png')
+        self.icon_dir = QIcon()
+        self.icon_file = QIcon()
+        self.icon_ukn = QIcon()
+        self.icon_dir.addPixmap(QPixmap(icon_dir_path))
+        self.icon_file.addPixmap(QPixmap(icon_file_path))
+        self.icon_ukn.addPixmap(QPixmap(icon_ukn_path))
+        self.server_root = '/'
+        self.is_root = True  # 是否已经在用户目录的根目录
+        self.ui.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.ui.tableWidget.verticalHeader().setVisible(False)
+        self.ui.tableWidget.doubleClicked.connect(self.change_dir)
 
     def upload(self):
         QMessageBox.about(
@@ -157,31 +164,24 @@ class Stats:
 
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
             self.ui.serverLbl.setText('远程目录列表：')
-
             root_files = user.get_server_files(self.ftpserver)
-            cur_dir = os.getcwd()
-            arrow_off = QIcon()
-            arrow_off_path = os.path.join(cur_dir, 'resources/common/arrow-off.png')
-            for name, size, type, date in root_files:
-                # file = [' ', name, size, type, date]
-                file = [name, size, type, date]
-                file_item = QTreeWidgetItem(file)
-                icon = QIcon()
+            for Name, Size, Type, Date in root_files:
+                file = [Name, Size, Type, Date]
 
                 if file[-2] == 'file':
-                    icon_path = os.path.join(cur_dir, 'resources/common/text.png')
+                    icon = self.icon_file
                 elif file[-2] == 'dir':
-                    icon_path = os.path.join(cur_dir, 'resources/common/directory.png')
+                    icon = self.icon_dir
                 else:
                     # unknown file type
-                    icon_path = os.path.join(cur_dir, 'resources/common/unknown.png')
-
-                icon.addPixmap(QPixmap(icon_path))
-                file_item.setIcon(0, icon)
-                self.ui.treeWidget.addTopLevelItem(file_item)
-                self.ui.treeWidget.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-                # self.ui.treeView.setColumnWidth(0, 20)
-                self.ui.treeWidget.setItemsExpandable(True)
+                    icon = self.icon_ukn
+                row_count = self.ui.tableWidget.rowCount()
+                self.ui.tableWidget.insertRow(row_count)
+                for col, text in enumerate(file):
+                    if col == 0:
+                        self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(icon, text))
+                    else:
+                        self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
 
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
@@ -189,6 +189,53 @@ class Stats:
             print(e)
             # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
 
+    def change_dir(self):
+        row = self.ui.tableWidget.currentRow()
+        target_type = self.ui.tableWidget.item(row, 2).text()
+        target_dir = self.ui.tableWidget.item(row, 0).text()
+        # 返回上一级目录
+        if target_dir == '..':
+            self.ftpserver.cwd('..')
+            files = user.get_server_files(self.ftpserver)
+            cur_dir = self.ftpserver.pwd()
+            if cur_dir == '/':  # 回到了根目录
+                self.ui.tableWidget.setRowCount(0)
+                self.ui.tableWidget.clearContents()
+            else:
+                self.ui.tableWidget.setRowCount(1)
+                self.ui.tableWidget.clearContents()
+                for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
+                    self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
+        # 进入子目录
+        elif target_type == 'dir':
+            self.ftpserver.cwd(target_dir)
+            files = user.get_server_files(self.ftpserver)
+            self.ui.tableWidget.setRowCount(1)
+            self.ui.tableWidget.clearContents()
+            for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
+                self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
+
+        # 无法进入文件
+        else:
+            # TODO: 打开文件
+            return
+
+        for Name, Size, Type, Date in files:
+            file = [Name, Size, Type, Date]
+            if file[-2] == 'file':
+                icon = self.icon_file
+            elif file[-2] == 'dir':
+                icon = self.icon_dir
+            else:
+                # unknown file type
+                icon = self.icon_ukn
+            row_count = self.ui.tableWidget.rowCount()
+            self.ui.tableWidget.insertRow(row_count)
+            for col, text in enumerate(file):
+                if col == 0:
+                    self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(icon, text))
+                else:
+                    self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
 
 app = QApplication([])
 stats = Stats()
