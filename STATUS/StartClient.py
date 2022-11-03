@@ -193,16 +193,17 @@ class Stats:
         row = self.ui.tableWidget.currentRow()
         target_type = self.ui.tableWidget.item(row, 2).text()
         target_dir = self.ui.tableWidget.item(row, 0).text()
+        cur_dir = user.get_server_files(self.ftpserver)
         # 返回上一级目录
-        if target_dir == '..':
+        if row == 0 and target_dir == '..' and cur_dir != '/':
             self.ftpserver.cwd('..')
             files = user.get_server_files(self.ftpserver)
             cur_dir = self.ftpserver.pwd()
             if cur_dir == '/':  # 回到了根目录
                 self.ui.tableWidget.setRowCount(0)
                 self.ui.tableWidget.clearContents()
-            else:
-                self.ui.tableWidget.setRowCount(1)
+            else:   # 不是根目录
+                self.ui.tableWidget.setRowCount(1)  # 第一行用于返回上一级目录
                 self.ui.tableWidget.clearContents()
                 for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
                     self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
@@ -220,6 +221,7 @@ class Stats:
             # TODO: 打开文件
             return
 
+        # 显示当前目录的文件并贴上图标
         for Name, Size, Type, Date in files:
             file = [Name, Size, Type, Date]
             if file[-2] == 'file':
