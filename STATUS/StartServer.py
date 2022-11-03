@@ -1,5 +1,7 @@
 import os
 import threading
+import time
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -111,8 +113,13 @@ class Server:
 
     # 应用服务器
     def apply_server(self):
-        self.mainWin.stateLbl.setText('状态：应用中……')
+        thread_apply = threading.Thread(target=self._apply_server)
+        thread_apply.setDaemon(True)
+        thread_apply.start()
 
+    def _apply_server(self):
+        self.mainWin.stateLbl.setText('状态：应用中……')
+        # time.sleep(10) # debug use
         try:
             name = self.mainWin.nameEdit.text() # seems to be dummy...
             address = self.mainWin.addressEdit.text()
