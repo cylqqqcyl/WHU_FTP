@@ -83,8 +83,9 @@ class Stats:
         # signal slots
         self.ui.eButton.clicked.connect(self.exit)  # 退出按键操作
         self.ui.ulButton.clicked.connect(self.upload)  # 上传按键操作
-        self.ui.upButton.setEnabled(False)  # 返回上层按键操作
-        self.ui.dButton.setEnabled(False)  # 下载按键操作
+        self.ui.upButton.setEnabled(False)  # 返回上层按键禁止
+        self.ui.ulButton.setEnabled(False)  # 上传按键禁止
+        self.ui.dButton.setEnabled(False)  # 下载按键禁止
         self.ui.qButton.clicked.connect(self.connect_server)  # 查询按键操作
 
         self.loginWin.connectBtn.clicked.connect(self.connect_shortcut)
@@ -123,6 +124,8 @@ class Stats:
         )
 
     def file_name(self, Qmodelidx):
+        self.ui.ulButton.setEnabled(True)  # 上传按键允许
+        self.ui.dButton.setEnabled(False)  # 下载按键禁止
         print(self.modelt.filePath(Qmodelidx))  # 输出文件的地址。
         print(self.modelt.fileName(Qmodelidx))  # 输出文件名
 
@@ -190,6 +193,8 @@ class Stats:
             # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
 
     def change_dir(self):
+        self.ui.ulButton.setEnabled(False)  # 上传按键禁止
+        self.ui.dButton.setEnabled(True)  # 下载按键运行
         row = self.ui.tableWidget.currentRow()
         target_type = self.ui.tableWidget.item(row, 2).text()
         target_dir = self.ui.tableWidget.item(row, 0).text()
