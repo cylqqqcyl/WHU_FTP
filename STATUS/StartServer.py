@@ -1,61 +1,73 @@
-import threading
-
-from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtWidgets import *
-# from PySide2.QtUiTools import QUiLoader
-from PyQt5 import uic, QtGui
-from PyQt5.QtCore import QFile
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import *
-import PyQt5
 import os
+import threading
+import time
+
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 import sys
-from src import user
-from client import Ui_MainWindow
-from login import Ui_loginForm
+from server import Ui_ServerWindow
+from adduser import Ui_addUserForm
+from src.ClientServer import WHUFTPServer
 
-dirname = os.path.dirname(PyQt5.__file__)
-plugin_path = os.path.join(dirname, 'plugins', 'platforms')
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
+class EmitStr(QObject):
+    textWrite = pyqtSignal(str)
 
-
-class LoginWin(QDialog, Ui_loginForm):
-    def __init__(self, parent=None):
-        super(LoginWin, self).__init__(parent)
-
-        self.setupUi(self)
-
-        self.closeBtn.clicked.connect(self.close)
-
-        # an example
-        self.sessionTbl.insertRow(0)
-        for col, text in enumerate(['whuftp', 'Francis', 'FTP', '21', '172.16.20.239', '123456']):
-            self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
-
-        self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
-
-    def get_selected_row(self):
-        row = self.sessionTbl.currentIndex().row()
-        user = self.sessionTbl.item(row, 1).text()
-        port = self.sessionTbl.item(row, 3).text()
-        host = self.sessionTbl.item(row, 4).text()
-        password = self.sessionTbl.item(row, 5).text()
-
-        return user, port, host, password
+    def write(self, text):
+        self.textWrite.emit(str(text))
 
 
-class ClientUI(QMainWindow, Ui_MainWindow):
-    def __init__(self, parent=None):
-        super(ClientUI, self).__init__(parent)
+class AddUserWin(QWidget, Ui_addUserForm):
+    def __init__(self):
+        super().__init__()
 
         self.setupUi(self)
 
-        self.loginWin = LoginWin()
+
+class ServerUI(QMainWindow, Ui_ServerWindow):
+    def __init__(self, parent=None):
+        super(ServerUI, self).__init__(parent)
+
+        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+
+        self.setupUi(self)
+
+        # debug use
+        self.nameEdit.setText('whuftp')
+        self.addressEdit.setText('172.16.20.195')
+        self.portEdit.setText('21')
+        self.rootEdit.setText('../user_dir')
+        self.dbEdit.setText('../src/user_info.db')
+        self.maxconEdit.setText('150')
+        self.maxconipEdit.setText('15')
+        self.readlimEdit.setText('300')
+        self.writelimEdit.setText('300')
+
+        self.rootBtn.clicked.connect(self.chosseRoot)
+        self.dbBtn.clicked.connect(self.chooseDatabase)
+
+    def chosseRoot(self):
+        dir_path = QFileDialog.getExistingDirectory(self,
+                                                    '选择服务器根目录',
+                                                    '/home')
+        if dir_path:
+            self.rootEdit.setText(dir_path)
+
+    def chooseDatabase(self):
+        db_path = QFileDialog.getOpenFileName(self,
+                                              '选择服务器数据库',
+                                              '/home')
+        if db_path[0]:
+            self.dbEdit.setText(db_path[0])
+
+
+
 
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
                                      '询问',
-                                     "确定要退出客户端吗？",
+                                     "确定要退出服务器吗？",
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
@@ -64,234 +76,248 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         else:
             e.ignore()
 
+    # 输出日志至text browser
+    def outputWriteInfo(self, text):
+        self.logBrowser.append(text)
 
-class Stats:
+    def outputWriteError(self, text):
+        # 错误信息用红色输出
+        self.logBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
+
+
+class Server:
     def __init__(self):
-        # 从文件中加载UI定义
-        self.ftpserver = None  # 所连接到的服务器实例
-        self.current_remote_dir = None  # 当前服务器目录
-        qfile_stats = QFile("client.ui")
-        qfile_stats.open(QFile.ReadOnly)
-        qfile_stats.close()
-        # 从 UI 定义中动态 创建一个相应的窗口对象
-        # 注意：里面的控件对象也成为窗口对象的属性了
-        # 比如 self.ui.button , self.ui.textEdit
-        self.loginWin = LoginWin()
-        self.ui = ClientUI()
-        # self.ui.button.clicked.connect(self.handleCalc)
+        self.server = None  # ftp server
+        self.thread_server = threading.Thread() # 服务器运行线程，防止GUI卡死
+        self.mainWin = ServerUI()
+        self.addUserWin = AddUserWin()
 
-        # signal slots
-        self.ui.eButton.clicked.connect(self.exit)  # 退出按键操作
-        self.ui.ulButton.clicked.connect(self.upload)  # 上传按键操作
-        self.ui.dButton.clicked.connect(self.download)  # 下载按键操作
-        self.ui.upButton.setEnabled(False)  # 返回上层按键禁止
-        self.ui.ulButton.setEnabled(False)  # 上传按键禁止
-        self.ui.dButton.setEnabled(False)  # 下载按键禁止
-        self.ui.qButton.clicked.connect(self.connect_server)  # 查询按键操作
 
-        self.loginWin.connectBtn.clicked.connect(self.connect_shortcut)
 
-        self.client_root = 'home'
-        self.modelt = QFileSystemModel()
-        self.modelt.setRootPath(self.client_root)
+        self.model = QFileSystemModel()
+        self.mainWin.treeView.setModel(self.model)
+        self.mainWin.treeView.doubleClicked.connect(self.file_name)  # 打开文件
 
-        # 为控件添加模式。
-        self.ui.treeView.setModel(self.modelt)
-        self.ui.treeView.setRootIndex(self.modelt.index(self.client_root))  # 只显示设置的那个文件路径。
-        self.ui.treeView.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.ui.treeView.doubleClicked.connect(self.file_name)  # 双击文件打开
+        self.initSignalSlots()
 
-        # 远程文件目录的icon
-        cur_dir = os.getcwd()
-        icon_dir_path = os.path.join(cur_dir, 'resources/common/directory.png')
-        icon_file_path = os.path.join(cur_dir, 'resources/common/text.png')
-        icon_ukn_path = os.path.join(cur_dir, 'resources/common/unknown.png')
-        self.icon_dir = QIcon()
-        self.icon_file = QIcon()
-        self.icon_ukn = QIcon()
-        self.icon_dir.addPixmap(QPixmap(icon_dir_path))
-        self.icon_file.addPixmap(QPixmap(icon_file_path))
-        self.icon_ukn.addPixmap(QPixmap(icon_ukn_path))
-        self.server_root = '/'
-        self.is_root = True  # 是否已经在用户目录的根目录
-        self.ui.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.ui.tableWidget.verticalHeader().setVisible(False)
-        self.ui.tableWidget.doubleClicked.connect(self.change_dir)
+    def initSignalSlots(self):
+        self.mainWin.applyBtn.clicked.connect(self.apply_server)
+        self.mainWin.startBtn.clicked.connect(self.start_server)
+        self.mainWin.closeBtn.clicked.connect(self.close_server)
+        self.mainWin.resetBtn.clicked.connect(self.reset_server)
 
-        self.remote_file = None
-        self.remote_dir = ''
-        self.local_file = None
-        self.local_dir = None
+        self.mainWin.addUserBtn.clicked.connect(self.add_user)
+        self.mainWin.updateBtn.clicked.connect(self.update_user_list)
+        self.mainWin.delUserBtn.clicked.connect(self.delete_user)
+        self.addUserWin.addUserBtn.clicked.connect(self.confirm_add_user)
 
-    def download(self):
-        # user.downloadfile(self.ftpserver, 'test.txt','D:/asoul.txt' )
-        # user.downloadfile(self.ftpserver, 'Francis/file.txt', 'D:/asoul.txt')
-        # user.downloadfile(self.ftpserver, self.remote_file, 'D:/asoul.txt')
-        tmp=-1
-        while(self.remote_file[tmp]!='/'):
-            tmp-=1
-        user.downloadfile(self.ftpserver,self.remote_file,self.local_dir+self.remote_file[tmp:])
-        return 0
+    # 应用服务器
+    def apply_server(self):
+        thread_apply = threading.Thread(target=self._apply_server)
+        thread_apply.setDaemon(True)
+        thread_apply.start()
 
-    def upload(self):
-        user.uploadfile(self.ftpserver,'D:/asoul.txt', self.remote_dir+'/asoul.txt')
-        QMessageBox.about(
-            self.ui, '登入信息',
-            f'''域名：\n{self.ui.domainEdit.text()}\n端口：\n{self.ui.portEdit.text()}\n用户名：\n{self.ui.nameEdit.text()}\n口令：\n{self.ui.pwEdit.text()}'''
-        )
-
-    def file_name(self, Qmodelidx):
-        tm_path=self.modelt.filePath(Qmodelidx)
-        print(self.modelt.filePath(Qmodelidx))  # 输出文件的地址。
-        print(self.modelt.fileName(Qmodelidx))  # 输出文件名
-        if os.path.isfile(tm_path):#本地当前选中为文件
-            self.local_file=tm_path
-            self.ui.ulButton.setEnabled(True and self.remote_dir != None )  # 上传按键允许
-        else:#本地当前选中为文件夹
-            self.local_file = None
-            self.local_dir = tm_path
-            self.ui.ulButton.setEnabled(False)  # 上传按键禁止
-
-    def exit(self):
-        reply = QMessageBox.question(self.ui,
-                                     '询问',
-                                     "确定要退出客户端吗？",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            sys.exit(app.exec())  # 更正退出
-        else:
-            pass
-
-    def connect_shortcut(self):
-        user, port, host, password = self.loginWin.get_selected_row()
-        self.ui.nameEdit.setText(user)
-        self.ui.portEdit.setText(port)
-        self.ui.domainEdit.setText(host)
-        self.ui.pwEdit.setText(password)
-        self.loginWin.close()
-
-    def connect_server(self):
-        # 注册线程来连接服务器，防止服务器未开启等情况时客户端卡死
-        thread = threading.Thread(target=self._connect_server)
-        thread.setDaemon(True)
-        thread.start()
-
-    def _connect_server(self):
-        self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
-        self.ui.serverLbl.setText('远程目录列表（连接中……）：')
+    def _apply_server(self):
+        self.mainWin.stateLbl.setText('状态：应用中……')
+        # time.sleep(10) # debug use
         try:
-            self.ftpserver = user.ftpconnect(
-                host=self.ui.domainEdit.text(),
-                username=self.ui.nameEdit.text(),
-                password=self.ui.pwEdit.text(),
-                port=int(self.ui.portEdit.text()))
-            self.current_remote_dir = self.ftpserver.pwd()
+            name = self.mainWin.nameEdit.text() # seems to be dummy...
+            address = self.mainWin.addressEdit.text()
+            port = self.mainWin.portEdit.text()
+            root_dir = self.mainWin.rootEdit.text()
+            log_path = os.path.join(root_dir, 'LOG.log')  # 根目录下生成日志
+            db_path = self.mainWin.dbEdit.text()
+            max_cons = self.mainWin.maxconEdit.text()
+            max_cons_per_ip = self.mainWin.maxconipEdit.text()
+            read_limit = self.mainWin.readlimEdit.text()
+            write_limit = self.mainWin.writelimEdit.text()
 
-            self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
-            self.ui.serverLbl.setText('远程目录列表：')
-            root_files = user.get_server_files(self.ftpserver)
-            for Name, Size, Type, Date in root_files:
-                file = [Name, Size, Type, Date]
+            # NOTE: 避免invalid literal for int() with base 10而卡死
+            try:
+                port = int(port)
+                max_cons = int(max_cons)
+                max_cons_per_ip = int(max_cons_per_ip)
+                read_limit = int(read_limit) * 1024  # GUI上填写的时KB/s
+                write_limit = int(write_limit) * 1024
 
-                if file[-2] == 'file':
-                    icon = self.icon_file
-                elif file[-2] == 'dir':
-                    icon = self.icon_dir
-                else:
-                    # unknown file type
-                    icon = self.icon_ukn
-                row_count = self.ui.tableWidget.rowCount()
-                self.ui.tableWidget.insertRow(row_count)
-                for col, text in enumerate(file):
-                    if col == 0:
-                        self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(icon, text))
-                    else:
-                        self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
+                self.server = WHUFTPServer(
+                    address, port,
+                    read_limit, write_limit,
+                    max_cons, max_cons_per_ip,
+                    root_dir, log_path, db_path,
+                )
+
+                self.server.apply_server()
+                self.mainWin.applyBtn.setDisabled(True)
+                self.mainWin.startBtn.setDisabled(False)
+                self.mainWin.stateLbl.setStyleSheet(
+                    "color: rgb(255, 255, 255); background-color: rgba(0, 170, 0, 200);")
+                self.mainWin.stateLbl.setText('状态：应用服务器成功！')
+
+            except Exception as e:
+                print(e)
 
         except Exception as e:
-            self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
-            self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
             print(e)
-            # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
+            self.server.close_server()
+            self.server = None
+            self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
+            self.mainWin.stateLbl.setText('状态：应用服务器失败！')
 
-    def change_dir(self):
-        row = self.ui.tableWidget.currentRow()
-        target_type = self.ui.tableWidget.item(row, 2).text()
-        target_dir = self.ui.tableWidget.item(row, 0).text()
-        print("ddddddddddddddddddddddddddddddddddddd"+target_dir)
-        print("[pppppppppppppppppppppppppppppppppppp"+target_type)
-        cur_dir = user.get_server_files(self.ftpserver)
-        # user.downloadfile(self.ftpserver, target_dir, 'D:/asoul.txt')
-
-        # 返回上一级目录
-        if row == 0 and target_dir == '..' and cur_dir != '/':
-            self.ftpserver.cwd('..')
-            files = user.get_server_files(self.ftpserver)
-            cur_dir = self.ftpserver.pwd()
-            if cur_dir == '/':  # 回到了根目录
-                self.ui.tableWidget.setRowCount(0)
-                self.ui.tableWidget.clearContents()
-            else:   # 不是根目录
-                self.ui.tableWidget.setRowCount(1)  # 第一行用于返回上一级目录
-                self.ui.tableWidget.clearContents()
-                for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
-                    self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
-        # 进入子目录
-        elif target_type == 'dir':
-            self.ftpserver.cwd(target_dir)
-            files = user.get_server_files(self.ftpserver)
-            self.ui.tableWidget.setRowCount(1)
-            self.ui.tableWidget.clearContents()
-            for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
-                self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
-
-        # 无法进入文件
+    # 开启服务器
+    def start_server(self):
+        if self.server is None:
+            QMessageBox.warning(self.mainWin, '警告', '请先应用服务器！')
         else:
-            # TODO: 打开文件
-            self.remote_dir=self.ftpserver.pwd()
-            if target_type != 'file':
-                self.remote_file=None
-                self.ui.dButton.setEnabled(False)  # 下载按键禁止
-            else:
-                if self.remote_dir!='/':
-                    self.remote_file=self.ftpserver.pwd()+'/'+target_dir
-                else:
-                    self.remote_file='/'+target_dir
-                self.ui.dButton.setEnabled(True)  # 下载按键允许
-            print('sdfsdf  ' + self.remote_dir+'\n',self.remote_file,self.ftpserver.pwd())
-            return
+            self.mainWin.stateLbl.setText('状态：启动服务器中……')
+            try:
+                self.thread_server = threading.Thread(target=self.server.start_server)
+                self.thread_server.setDaemon(True)  # 守护线程
+                self.thread_server.start()
 
-        # 显示当前目录的文件并贴上图标
-        for Name, Size, Type, Date in files:
-            file = [Name, Size, Type, Date]
-            if file[-2] == 'file':
-                icon = self.icon_file
-            elif file[-2] == 'dir':
-                icon = self.icon_dir
-            else:
-                # unknown file type
-                icon = self.icon_ukn
-            row_count = self.ui.tableWidget.rowCount()
-            self.ui.tableWidget.insertRow(row_count)
-            for col, text in enumerate(file):
-                if col == 0:
-                    self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(icon, text))
-                else:
-                    self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
+                self.mainWin.startBtn.setDisabled(True)
+                self.mainWin.applyBtn.setDisabled(True)
+                self.mainWin.closeBtn.setDisabled(False)
+                self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
+                self.mainWin.stateLbl.setText('状态：已开启')
 
-        self.remote_dir = self.ftpserver.pwd()[1:]
-        if target_type != 'file':
-            self.remote_file = None
-            self.ui.dButton.setEnabled(False)  # 下载按键禁止
+
+                # 显示文件目录
+                self.model.setRootPath(self.server.root_dir)
+                self.mainWin.treeView.setRootIndex(self.model.index(self.server.root_dir))
+            except Exception as e:
+                self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
+                self.mainWin.stateLbl.setText('状态：启动服务器失败！')
+
+    def close_server(self):
+        if self.server:
+            self.server.close_server()
+            self.server = None
+            self.mainWin.startBtn.setDisabled(True)
+            self.mainWin.applyBtn.setDisabled(False)
+            self.mainWin.closeBtn.setDisabled(True)
+            self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
+            self.mainWin.stateLbl.setText('状态：未开启')
+
+    # 重置服务器
+    def reset_server(self):
+        if self.server:
+            self.server.close_server()
+            self.server = None
+        self.mainWin.nameEdit.setText('')
+        self.mainWin.addressEdit.setText('')
+        self.mainWin.portEdit.setText('')
+        self.mainWin.rootEdit.setText('')
+        self.mainWin.dbEdit.setText('')
+        self.mainWin.maxconEdit.setText('')
+        self.mainWin.maxconipEdit.setText('')
+        self.mainWin.readlimEdit.setText('')
+        self.mainWin.writelimEdit.setText('')
+        self.mainWin.startBtn.setDisabled(True)
+        self.mainWin.applyBtn.setDisabled(False)
+        self.mainWin.closeBtn.setDisabled(True)
+        self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
+        self.mainWin.stateLbl.setText('状态：未创建')
+
+
+    def update_user_list(self):
+        if self.server:
+            try:
+                self.mainWin.userTbl.setRowCount(0)
+                self.mainWin.userTbl.clearContents()
+                user_info = self.server.authorizer.user_table
+                for row, item in enumerate(user_info.items()):
+                    username = item[0]
+                    password = item[1]['pwd']
+                    permission = item[1]['perm']
+                    self.mainWin.userTbl.insertRow(row)
+                    self.mainWin.userTbl.setItem(row, 0, QTableWidgetItem(username))
+                    self.mainWin.userTbl.setItem(row, 1, QTableWidgetItem(password))
+                    self.mainWin.userTbl.setItem(row, 2, QTableWidgetItem(permission))
+            except Exception as e:
+                print(e)
         else:
-            self.remote_file = self.ftpserver.pwd() + '/' + target_dir
-            self.ui.dButton.setEnabled(True)  # 下载按键允许
-        print('sdfsdf  ' + self.remote_dir + '\n', self.remote_file, self.ftpserver.pwd())
+            QMessageBox.warning(self.mainWin,
+                                '警告',
+                                '请先打开服务器！')
 
 
-app = QApplication([])
-stats = Stats()
-stats.loginWin.exec()
-stats.ui.show()
-sys.exit(app.exec())  # 安全结束
+    # 添加用户
+    def add_user(self):
+        # modification is needed
+        if self.server:
+            self.addUserWin.show()
+        else:
+            QMessageBox.warning(self.mainWin,
+                                '警告',
+                                '请先打开服务器！')
+
+    # 确认添加用户
+    def confirm_add_user(self):
+        # TODO: 赋予不同权限
+        username = self.addUserWin.nameEdit.text()
+        password = self.addUserWin.passwordEdit.text()
+        if self.server and username and password:
+            try:
+                self.server.register(username, password)
+            except Exception as e:
+                print(e)
+            else:
+                print(f'Successfully add user {username}!')
+                self.addUserWin.close()
+
+
+    def get_selected_user(self):
+        row = self.mainWin.userTbl.currentIndex().row()
+        username = self.mainWin.userTbl.item(row, 0).text()
+        print(username)
+        # password = self.mainWin.userTbl.item(row, 2).text()
+        # permission = self.mainWin.userTbl.item(row, 3).text()
+
+        return  username
+
+    # 删除用户
+    def delete_user(self):
+        if self.server:
+            try:
+                username = self.get_selected_user()
+            except Exception as e:
+                print(e)
+            else:
+                reply = QMessageBox.question(self.mainWin,
+                                             '询问',
+                                             f'确定要删除用户{username}吗？',
+                                             QMessageBox.Yes | QMessageBox.No,
+                                             QMessageBox.No
+                                             )
+                if reply == QMessageBox.Yes:
+                    try:
+                        self.server.authorizer.remove_user(username)
+                        user_dir =  os.path.join(self.server.root_dir, username)
+                        # NOTE: 删除用户文件（optional）
+                        # 直接这么删除有问题，会报错[WinError 5] 拒绝访问。暂时为解决
+                        # if os.path.exists(user_dir):
+                        #     os.remove(user_dir)
+                        print(f'Successfully removed user {username}!')
+                        self.update_user_list()
+                    except Exception as e:
+                        print(e)
+                else:
+                    pass
+        else:
+            QMessageBox.warning(self.mainWin,
+                                '警告',
+                                '请先打开服务器！')
+
+
+    def file_name(self, Qmodelidx):
+        print(self.model.filePath(Qmodelidx))  # 输出文件的地址。
+        print(self.model.fileName(Qmodelidx))  # 输出文件名
+
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    server = Server()
+    server.mainWin.show()
+    sys.exit(app.exec_())
