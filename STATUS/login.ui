@@ -134,6 +134,9 @@ color: rgb(0, 0, 0);</string>
          </item>
          <item>
           <widget class="QTableWidget" name="sessionTbl">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -151,6 +154,9 @@ color: rgb(0, 0, 0);</string>
            </property>
            <property name="selectionBehavior">
             <enum>QAbstractItemView::SelectRows</enum>
+           </property>
+           <property name="showGrid">
+            <bool>true</bool>
            </property>
            <property name="columnCount">
             <number>6</number>
