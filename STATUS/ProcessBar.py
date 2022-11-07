@@ -76,7 +76,6 @@ class PopupProgressBar:
             self.update_data(self.value)
             self.labelText.set(self.text)
             time.sleep(0.01)
-        print("hhhhhhhhhhhhhhhhhhhhhhhh")
 
     def update_data(self, value):
         if not self.bar:
@@ -88,15 +87,11 @@ class PopupProgressBar:
     def stop(self):
         if self.thread_upd:
             self.is_stop_thread_upd = True
-            print("okkkkkkkkkkkkkkkkkkkkkk")
 
         self.thread_upd.join()
-        print("joinjoinjoinjoinjoinjoinjoin")
         self.root.quit()
 
 
-# localfile 本机要上传的文件与路径
-# remotepath ftp服务器的路径 (ftp://192.168.1.8/xxx)
 def upload_file(cur_ftp,localpath, remotepath):
     global file_size
     global bar
@@ -106,22 +101,15 @@ def upload_file(cur_ftp,localpath, remotepath):
     bufsize = 1024
     fp = open(localpath, 'rb')
     file_size = os.path.getsize(localpath)
+    if file_size==0:
+        time.sleep(0.2)
+        bar.stop()
     cur_ftp.storbinary('STOR ' + remotepath, fp, bufsize, callback=upload_file_cb)
     cur_ftp.set_debuglevel(0)
     fp.close()
 
 
-    # cur_ftp = FTP()
-    # cur_ftp.connect(HOST, PORT, TIMEOUT)  # 连接ftp服务器
-    # cur_ftp.login(USER_NAME, PASS_WORD)  # 登录ftp服务器
-    # cur_ftp.cwd(remotepath)  # 设置ftp服务器端的路径
-    # cur_file = open(localfile, 'rb')  # 打开本地文件
-    # file_size = os.path.getsize(localfile)
-    # cur_ftp.storbinary('STOR %s' % os.path.basename(localfile), cur_file, blocksize=BLOCK_SIZE,
-    #                    callback=upload_file_cb)  # 上传文件到ftp服务器
-    # print('upload_file done')
-    # cur_file.close()  # 关闭本地文件
-    # cur_ftp.quit()  # 退出
+
 
 
 def upload_file_cb(block):
@@ -150,7 +138,11 @@ def download_ftp(ftp, localpath, remotepath):
     fp = open(localpath, 'wb')
     # fp = open(localpath, 'r')
     file_size = ftp.size(remotepath)
+
     ftp.retrbinary('RETR ' + remotepath,blocksize= bufsize, callback=download_file_cb)
+    if file_size == 0:
+        time.sleep(0.2)
+        bar.stop()
     ftp.set_debuglevel(0)
     fp.close()
 
@@ -176,45 +168,11 @@ def download_file_cb(block):
     fp.write(block)
     # 显示下载进度
     download_size = download_size + len(block)
-    bar.value = download_size / file_size * 100
-    bar.text = format(download_size / file_size * 100, '.2f') + '%'
+
+    tmp = download_size / file_size * 100
+    bar.value = tmp
+    bar.text = format(tmp, '.2f') + '%'
     if bar.value >= 100:
         time.sleep(0.2)
         bar.stop()
 
-i=0
-
-def f1():
-    global i
-    global ct
-    i+=1
-    print(i)
-    if i<2:
-        ct= Tkinter.Tk()
-        t2 = threading.Thread(target=f2)
-        t2.start()
-        ct.mainloop()
-    else:
-        time.sleep(2)
-        ct.quit()
-        ct=Tkinter.Tk()
-        ct.mainloop()
-        print("quit")
-
-def f2():
-    time.sleep(5)
-    print("sdfdsf")
-
-if '__main__' == __name__:
-
-    t1=threading.Thread(target=f1)
-    t1.start()
-    # t1.join()
-    # time.sleep(2)
-    t2=threading.Thread(target=f1)
-
-    t2.start()
-    # ct = Tkinter.Tk()
-    # ct.mainloop()
-    # upload_file('./test.apk', '/')
-    # print('ok')
