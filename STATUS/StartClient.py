@@ -1,6 +1,6 @@
 import threading
 import ProcessBar as PB
-from pb import downloadThread
+# from pb import downloadThread
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWidgets import *
 # from PySide2.QtUiTools import QUiLoader
