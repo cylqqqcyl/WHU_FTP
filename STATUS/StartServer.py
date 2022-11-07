@@ -1,7 +1,7 @@
 import os
 import threading
 import time
-
+import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -9,6 +9,7 @@ import sys
 from server import Ui_ServerWindow
 from adduser import Ui_addUserForm
 from src.ClientServer import WHUFTPServer
+
 
 class EmitStr(QObject):
     textWrite = pyqtSignal(str)
@@ -33,16 +34,19 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 
         self.setupUi(self)
 
-        # debug use
-        self.nameEdit.setText('whuftp')
-        self.addressEdit.setText('172.16.20.195')
-        self.portEdit.setText('21')
-        self.rootEdit.setText('../user_dir')
-        self.dbEdit.setText('../src/user_info.db')
-        self.maxconEdit.setText('150')
-        self.maxconipEdit.setText('15')
-        self.readlimEdit.setText('300')
-        self.writelimEdit.setText('300')
+        with open('cache/config_server.json', "r") as f:
+            data = f.read()
+        config = json.loads(data)
+
+        self.nameEdit.setText(config['name'])
+        self.addressEdit.setText(config['domain'])
+        self.portEdit.setText(config['port'])
+        self.rootEdit.setText(config['root_dir'])
+        self.dbEdit.setText(config['db_path'])
+        self.maxconEdit.setText(config['max_cons'])
+        self.maxconipEdit.setText(config['max_cons_per_ip'])
+        self.readlimEdit.setText(config['read_limit'])
+        self.writelimEdit.setText(config['write_limit'])
 
         self.rootBtn.clicked.connect(self.chosseRoot)
         self.dbBtn.clicked.connect(self.chooseDatabase)
@@ -61,8 +65,31 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         if db_path[0]:
             self.dbEdit.setText(db_path[0])
 
+    def saveConfig(self):
+        name = self.nameEdit.text()
+        domain = self.addressEdit.text()
+        port = self.portEdit.text()
+        root_dir = self.rootEdit.text()
+        db_path = self.dbEdit.text()
+        max_cons = self.maxconEdit.text()
+        max_cons_per_ip = self.maxconipEdit.text()
+        read_limit = self.readlimEdit.text()
+        write_limit = self.writelimEdit.text()
 
+        config = dict()
+        config['name'] = name
+        config['domain'] = domain
+        config['port'] = port
+        config['root_dir'] = root_dir
+        config['db_path'] = db_path
+        config['max_cons'] = max_cons
+        config['max_cons_per_ip'] = max_cons_per_ip
+        config['read_limit'] = read_limit
+        config['write_limit'] = write_limit
 
+        data = json.dumps(config)
+        with open('cache/config_server.json', 'w') as f:
+            f.write(data)
 
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
@@ -71,6 +98,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
+            self.saveConfig()
             e.accept()
             sys.exit(0)
         else:
@@ -88,11 +116,9 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 class Server:
     def __init__(self):
         self.server = None  # ftp server
-        self.thread_server = threading.Thread() # 服务器运行线程，防止GUI卡死
+        self.thread_server = threading.Thread()  # 服务器运行线程，防止GUI卡死
         self.mainWin = ServerUI()
         self.addUserWin = AddUserWin()
-
-
 
         self.model = QFileSystemModel()
         self.mainWin.treeView.setModel(self.model)
@@ -121,7 +147,7 @@ class Server:
         self.mainWin.stateLbl.setText('状态：应用中……')
         # time.sleep(10) # debug use
         try:
-            name = self.mainWin.nameEdit.text() # seems to be dummy...
+            name = self.mainWin.nameEdit.text()  # seems to be dummy...
             address = self.mainWin.addressEdit.text()
             port = self.mainWin.portEdit.text()
             root_dir = self.mainWin.rootEdit.text()
@@ -178,15 +204,16 @@ class Server:
                 self.mainWin.startBtn.setDisabled(True)
                 self.mainWin.applyBtn.setDisabled(True)
                 self.mainWin.closeBtn.setDisabled(False)
-                self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
+                self.mainWin.stateLbl.setStyleSheet(
+                    "color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
                 self.mainWin.stateLbl.setText('状态：已开启')
-
 
                 # 显示文件目录
                 self.model.setRootPath(self.server.root_dir)
                 self.mainWin.treeView.setRootIndex(self.model.index(self.server.root_dir))
             except Exception as e:
-                self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
+                self.mainWin.stateLbl.setStyleSheet(
+                    "color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
                 self.mainWin.stateLbl.setText('状态：启动服务器失败！')
 
     def close_server(self):
@@ -196,7 +223,8 @@ class Server:
             self.mainWin.startBtn.setDisabled(True)
             self.mainWin.applyBtn.setDisabled(False)
             self.mainWin.closeBtn.setDisabled(True)
-            self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
+            self.mainWin.stateLbl.setStyleSheet(
+                "color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
             self.mainWin.stateLbl.setText('状态：未开启')
 
     # 重置服务器
@@ -219,7 +247,6 @@ class Server:
         self.mainWin.stateLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
         self.mainWin.stateLbl.setText('状态：未创建')
 
-
     def update_user_list(self):
         if self.server:
             try:
@@ -240,7 +267,6 @@ class Server:
             QMessageBox.warning(self.mainWin,
                                 '警告',
                                 '请先打开服务器！')
-
 
     # 添加用户
     def add_user(self):
@@ -266,7 +292,6 @@ class Server:
                 print(f'Successfully add user {username}!')
                 self.addUserWin.close()
 
-
     def get_selected_user(self):
         row = self.mainWin.userTbl.currentIndex().row()
         username = self.mainWin.userTbl.item(row, 0).text()
@@ -274,7 +299,7 @@ class Server:
         # password = self.mainWin.userTbl.item(row, 2).text()
         # permission = self.mainWin.userTbl.item(row, 3).text()
 
-        return  username
+        return username
 
     # 删除用户
     def delete_user(self):
@@ -293,7 +318,7 @@ class Server:
                 if reply == QMessageBox.Yes:
                     try:
                         self.server.authorizer.remove_user(username)
-                        user_dir =  os.path.join(self.server.root_dir, username)
+                        user_dir = os.path.join(self.server.root_dir, username)
                         # NOTE: 删除用户文件（optional）
                         # 直接这么删除有问题，会报错[WinError 5] 拒绝访问。暂时为解决
                         # if os.path.exists(user_dir):
@@ -309,11 +334,9 @@ class Server:
                                 '警告',
                                 '请先打开服务器！')
 
-
     def file_name(self, Qmodelidx):
         print(self.model.filePath(Qmodelidx))  # 输出文件的地址。
         print(self.model.fileName(Qmodelidx))  # 输出文件名
-
 
 
 if __name__ == '__main__':

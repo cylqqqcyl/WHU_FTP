@@ -1,4 +1,5 @@
 import threading
+import json
 import ProcessBar as PB
 # from pb import downloadThread
 from PyQt5.QtWidgets import QApplication, QMessageBox
@@ -28,9 +29,13 @@ class LoginWin(QDialog, Ui_loginForm):
 
         self.closeBtn.clicked.connect(self.close)
 
-        # an example
+        # 获取上次的config
+        with open('cache/config_client.json', "r") as f:
+            data = f.read()
+        config = json.loads(data)
+
         self.sessionTbl.insertRow(0)
-        for col, text in enumerate(['whuftp', 'Francis', 'FTP', '21', '172.16.20.239', '123456']):
+        for col, text in enumerate(config.values()):
             self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
 
         self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
@@ -53,6 +58,26 @@ class ClientUI(QMainWindow, Ui_MainWindow):
 
         self.loginWin = LoginWin()
 
+    def saveConfig(self):
+        name = 'whuftp'
+        username = self.nameEdit.text()
+        protocol = 'FTP'
+        port = self.portEdit.text()
+        domain = self.domainEdit.text()
+        password = self.pwEdit.text()
+
+        config = dict()
+        config['name'] = name
+        config['username'] = username
+        config['protocol'] = protocol
+        config['port'] = port
+        config['domain'] = domain
+        config['password'] = password
+
+        data = json.dumps(config)
+        with open('cache/config_client.json', 'w') as f:
+            f.write(data)
+
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
                                      '询问',
@@ -60,6 +85,7 @@ class ClientUI(QMainWindow, Ui_MainWindow):
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
+            self.saveConfig()
             e.accept()
             sys.exit(0)
         else:
@@ -69,7 +95,7 @@ class ClientUI(QMainWindow, Ui_MainWindow):
 class Stats:
     def __init__(self):
         # 从文件中加载UI定义
-        self.I=0
+        self.I = 0
         self.ftpserver = None  # 所连接到的服务器实例
         self.current_remote_dir = None  # 当前服务器目录
         qfile_stats = QFile("client.ui")
@@ -125,24 +151,27 @@ class Stats:
         self.local_file = None
         self.local_dir = None
 
+
+
     def download(self):
-        self.I+=1
+        self.I += 1
         # user.downloadfile(self.ftpserver, 'test.txt','D:/asoul.txt' )
         # user.downloadfile(self.ftpserver, 'Francis/file.txt', 'D:/asoul.txt')
         # user.downloadfile(self.ftpserver, self.remote_file, 'D:/asoul.txt')
-        tmp=-1
-        while(self.remote_file[tmp]!='/'):
-            tmp-=1
-        if self.local_dir[-1]=='/':
-            tmp+=1
+        tmp = -1
+        while (self.remote_file[tmp] != '/'):
+            tmp -= 1
+        if self.local_dir[-1] == '/':
+            tmp += 1
         # user.downloadfile(self.ftpserver, self.remote_file, self.local_dir + self.remote_file[tmp:])
-        if self.I==2:
+        if self.I == 2:
             print("222222222222")
         # downLoader = downloadThread(self.local_dir + self.remote_file[tmp:], self.remote_file, self.ftpserver)  # 实例化一个下载类，并传入下载链接和保存路径
         # downLoader.download_proess_signal.connect(downLoader.change_progressbar_value)  # 处理下载类的信号
         # downLoader.start()  # 开启子线程
         # downLoader.exec()  # 保护子线程，否则主线程调用函数结束的时候子线程也被迫退出3.
         PB.download_ftp(self.ftpserver, self.local_dir + self.remote_file[tmp:], self.remote_file)
+
         return 0
 
     def upload(self):
@@ -159,14 +188,14 @@ class Stats:
         # )
 
     def file_name(self, Qmodelidx):
-        tm_path=self.modelt.filePath(Qmodelidx)
+        tm_path = self.modelt.filePath(Qmodelidx)
         # print(self.modelt.fileInfo(Qmodelidx).suffix())
         # print(self.modelt.filePath(Qmodelidx))  # 输出文件的地址。
         # print(self.modelt.fileName(Qmodelidx))  # 输出文件名
-        if os.path.isfile(tm_path):#本地当前选中为文件
-            self.local_file=tm_path
-            self.ui.ulButton.setEnabled(True and self.remote_dir != None )  # 上传按键允许
-        else:#本地当前选中为文件夹
+        if os.path.isfile(tm_path):  # 本地当前选中为文件
+            self.local_file = tm_path
+            self.ui.ulButton.setEnabled(True and self.remote_dir != None)  # 上传按键允许
+        else:  # 本地当前选中为文件夹
             self.local_file = None
             self.local_dir = tm_path
             self.ui.ulButton.setEnabled(False)  # 上传按键禁止
@@ -178,7 +207,8 @@ class Stats:
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
-            sys.exit(app.exec())  # 更正退出
+            self.ui.saveConfig()
+            sys.exit(0)  # 更正退出
         else:
             pass
 
@@ -251,7 +281,7 @@ class Stats:
             if cur_dir == '/':  # 回到了根目录
                 self.ui.tableWidget.setRowCount(0)
                 self.ui.tableWidget.clearContents()
-            else:   # 不是根目录
+            else:  # 不是根目录
                 self.ui.tableWidget.setRowCount(1)  # 第一行用于返回上一级目录
                 self.ui.tableWidget.clearContents()
                 for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
@@ -265,18 +295,16 @@ class Stats:
             for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
                 self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
 
-        # 无法进入文件
         else:
-            # TODO: 打开文件
-            self.remote_dir=self.ftpserver.pwd()
+            self.remote_dir = self.ftpserver.pwd()
             if target_type != 'file':
-                self.remote_file=None
+                self.remote_file = None
                 self.ui.dButton.setEnabled(False)  # 下载按键禁止
             else:
-                if self.remote_dir!='/':
-                    self.remote_file=self.ftpserver.pwd()+'/'+target_dir
+                if self.remote_dir != '/':
+                    self.remote_file = self.ftpserver.pwd() + '/' + target_dir
                 else:
-                    self.remote_file='/'+target_dir
+                    self.remote_file = '/' + target_dir
                 self.ui.dButton.setEnabled(True)  # 下载按键允许
             # print('sdfsdf  ' + self.remote_dir+'\n',self.remote_file,self.ftpserver.pwd())
             return
@@ -307,6 +335,7 @@ class Stats:
             self.remote_file = self.ftpserver.pwd() + '/' + target_dir
             self.ui.dButton.setEnabled(True)  # 下载按键允许
         # print('sdfsdf  ' + self.remote_dir + '\n', self.remote_file, self.ftpserver.pwd())
+
 
 app = QApplication([])
 stats = Stats()
