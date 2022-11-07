@@ -154,6 +154,7 @@ class Stats:
     def _connect_server(self):
         self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
         self.ui.serverLbl.setText('远程目录列表（连接中……）：')
+        self.ui.qButton.setEnabled(False)  # 禁用查询
         try:
             self.ftpserver = user.ftpconnect(
                 host=self.ui.domainEdit.text(),
@@ -188,6 +189,7 @@ class Stats:
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
             print(e)
             # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
+        self.ui.qButton.setEnabled(True)  # 重新启用查询
 
     def change_dir(self):
         row = self.ui.tableWidget.currentRow()
