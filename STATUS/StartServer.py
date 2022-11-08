@@ -14,8 +14,8 @@ import socket
 import shutil
 
 
-class EmitStr(QObject):
-    textWrite = pyqtSignal(str)
+class EmitStr(QObject):  # 日志输出类
+    textWrite = pyqtSignal(str)  # 定义一个发送str的信号
 
     def write(self, text):
         self.textWrite.emit(str(text))
@@ -79,7 +79,6 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         read_limit = self.readlimEdit.text()
         write_limit = self.writelimEdit.text()
 
-
         config = self.config
         values = [name, port, root_dir, db_path, max_cons, max_cons_per_ip, read_limit, write_limit]
         keys = config.keys()
@@ -125,9 +124,9 @@ class Server:
         self.mainWin.treeView.setModel(self.model)
         self.mainWin.treeView.doubleClicked.connect(self.file_name)  # 打开文件
 
-
-
         self.initSignalSlots()
+        sys.stdout = EmitStr(textWrite=self.updateLog)
+        sys.stderr = EmitStr(textWrite=self.updateLog)  # 将控制台输出打印在日志页面
 
     def initSignalSlots(self):
         self.mainWin.applyBtn.clicked.connect(self.apply_server)
@@ -341,6 +340,10 @@ class Server:
         print(self.model.filePath(Qmodelidx))  # 输出文件的地址。
         print(self.model.fileName(Qmodelidx))  # 输出文件名
 
+    def updateLog(self,text):  # 日志更新
+        cursor = self.mainWin.logBrowser.textCursor()
+        cursor.insertText(text)
+        self.mainWin.logBrowser.setTextCursor(cursor)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
