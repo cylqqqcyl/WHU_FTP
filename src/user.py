@@ -35,7 +35,7 @@ def uploadfile(ftp, localpath, remotepath):
     uploaded_size = ftp.size(remotepath)  # 断点续传
     fp = open(localpath, 'rb')
     fp.seek(uploaded_size)
-    ftp.storbinary('STOR ' + remotepath, fp, bufsize,rest=uploaded_size)
+    ftp.storbinary('STOR ' + remotepath, fp, bufsize, rest=uploaded_size)
     ftp.set_debuglevel(0)
     fp.close()
 
@@ -48,7 +48,7 @@ def downloadfile(ftp, remotepath, localpath):
         fp = open(localpath, 'wb')
     downloaded_size = os.path.getsize(localpath)  # 断点续传
     fp.seek(downloaded_size)
-    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize,rest=downloaded_size)
+    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize, rest=downloaded_size)
     ftp.set_debuglevel(0)
     fp.close()
 
