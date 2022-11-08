@@ -10,6 +10,7 @@ from server import Ui_ServerWindow
 from adduser import Ui_addUserForm
 from src.ClientServer import WHUFTPServer
 import socket
+import shutil
 
 
 class EmitStr(QObject):
