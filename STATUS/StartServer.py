@@ -1,4 +1,5 @@
 import os
+import shutil
 import threading
 import time
 import json
@@ -70,7 +71,6 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 
     def saveConfig(self):
         name = self.nameEdit.text()
-        domain = self.addressEdit.text()
         port = self.portEdit.text()
         root_dir = self.rootEdit.text()
         db_path = self.dbEdit.text()
@@ -81,7 +81,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 
 
         config = self.config
-        values = [name, domain, port, root_dir, db_path, max_cons, max_cons_per_ip, read_limit, write_limit]
+        values = [name, port, root_dir, db_path, max_cons, max_cons_per_ip, read_limit, write_limit]
         keys = config.keys()
 
         for (key, value) in zip(keys, values):
@@ -204,6 +204,8 @@ class Server:
                 self.mainWin.stateLbl.setStyleSheet(
                     "color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
                 self.mainWin.stateLbl.setText('状态：已开启')
+                # 显示用户列表
+                self.update_user_list()
 
                 # 显示文件目录
                 self.model.setRootPath(self.server.root_dir)
@@ -316,6 +318,7 @@ class Server:
                     try:
                         self.server.authorizer.remove_user(username)
                         user_dir = os.path.join(self.server.root_dir, username)
+
                         # shutil是个神奇的玩意:)
                         if os.path.exists(user_dir):
                             shutil.rmtree(user_dir)

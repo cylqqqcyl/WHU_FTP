@@ -1,1 +1,2 @@
-{"name": "whuftp", "domain": "10.131.153.218", "port": "21", "root_dir": "../user_dir", "db_path": "../src/user_info.db", "max_cons": "150", "max_cons_per_ip": "15", "read_limit": "300", "write_limit": "300"}
+
+{"name": "whuftp", "port": "21", "root_dir": "../user_dir", "db_path": "../src/user_info.db", "max_cons": "150", "max_cons_per_ip": "15", "read_limit": "300", "write_limit": "300"}
