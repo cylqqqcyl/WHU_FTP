@@ -60,7 +60,7 @@ class WHUFTPServer:
         try:
             cursor.execute('select * from user')
         except sqlite3.OperationalError:
-            cursor.execute('create table user(username char(20),password char(20))')
+            cursor.execute('create table user(username char(20) primary key not null,password char(20))')  # 用户名为主键
 
         user_info = cursor.fetchall()
         for username, password in user_info:
@@ -91,6 +91,19 @@ class WHUFTPServer:
             if not os.path.exists(user_dir):
                 os.makedirs(user_dir)
             self.authorizer.add_user(uname, password, user_dir, perm="elradfmw")
+        cursor.close()
+        conn.commit()
+        conn.close()
+
+    def del_user(self, uname):  # 删除用户函数
+        uname = str(uname)
+        assert len(uname) < 21
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('delete from user where username="{}"'.format(uname))
+        except Exception as e:
+            print(e)
         cursor.close()
         conn.commit()
         conn.close()
