@@ -87,6 +87,7 @@ class Ui_ServerWindow(object):
         font.setPointSize(10)
         self.addressEdit.setFont(font)
         self.addressEdit.setObjectName("addressEdit")
+        self.addressEdit.setFocusPolicy(QtCore.Qt.NoFocus)  # 设置ip地址为只读
         self.gridLayout_6.addWidget(self.addressEdit, 1, 1, 1, 1)
         self.portLbl = QtWidgets.QLabel(self.infoTab)
         self.portLbl.setMinimumSize(QtCore.QSize(100, 0))
