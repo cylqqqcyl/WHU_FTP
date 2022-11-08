@@ -35,7 +35,7 @@ class WHUFTPServer:
         self.dtp_handler.read_limit = self.read_limit
         self.dtp_handler.write_limit = self.write_limit
         self.handler.dtp_handler = self.dtp_handler
-        self.server = FTPServer(('0.0.0.0', self.port), self.handler)
+        self.server = FTPServer((self.address, self.port), self.handler)
 
         self.server.max_cons = self.max_cons
         self.server.max_cons_per_ip = self.max_cons_per_ip

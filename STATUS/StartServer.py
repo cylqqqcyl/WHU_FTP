@@ -9,6 +9,7 @@ import sys
 from server import Ui_ServerWindow
 from adduser import Ui_addUserForm
 from src.ClientServer import WHUFTPServer
+import socket
 
 
 class EmitStr(QObject):
@@ -40,7 +41,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         self.config = config
 
         self.nameEdit.setText(config['name'])
-        self.addressEdit.setText(config['domain'])
+        self.addressEdit.setText(socket.gethostbyname(socket.gethostname()))  # 本机ip即为FTP服务器ip
         self.portEdit.setText(config['port'])
         self.rootEdit.setText(config['root_dir'])
         self.dbEdit.setText(config['db_path'])
