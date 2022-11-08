@@ -33,6 +33,7 @@ class LoginWin(QDialog, Ui_loginForm):
         with open('cache/config_client.json', "r") as f:
             data = f.read()
         config = json.loads(data)
+        self.config = config
 
         self.sessionTbl.insertRow(0)
         for col, text in enumerate(config.values()):
@@ -66,17 +67,16 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         domain = self.domainEdit.text()
         password = self.pwEdit.text()
 
-        config = dict()
-        config['name'] = name
-        config['username'] = username
-        config['protocol'] = protocol
-        config['port'] = port
-        config['domain'] = domain
-        config['password'] = password
+        config = self.loginWin.config
+        values = [name, username, protocol, port, domain, password]
+        keys = config.keys()
+        for (key, value) in zip(keys, values):
+            if value:
+                config[key] = value
 
-        data = json.dumps(config)
-        with open('cache/config_client.json', 'w') as f:
-            f.write(data)
+            data = json.dumps(config)
+            with open('cache/config_client.json', 'w') as f:
+                f.write(data)
 
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
