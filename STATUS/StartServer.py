@@ -37,6 +37,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         with open('cache/config_server.json', "r") as f:
             data = f.read()
         config = json.loads(data)
+        self.config = config
 
         self.nameEdit.setText(config['name'])
         self.addressEdit.setText(config['domain'])
@@ -76,16 +77,14 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
         read_limit = self.readlimEdit.text()
         write_limit = self.writelimEdit.text()
 
-        config = dict()
-        config['name'] = name
-        config['domain'] = domain
-        config['port'] = port
-        config['root_dir'] = root_dir
-        config['db_path'] = db_path
-        config['max_cons'] = max_cons
-        config['max_cons_per_ip'] = max_cons_per_ip
-        config['read_limit'] = read_limit
-        config['write_limit'] = write_limit
+
+        config = self.config
+        values = [name, domain, port, root_dir, db_path, max_cons, max_cons_per_ip, read_limit, write_limit]
+        keys = config.keys()
+
+        for (key, value) in zip(keys, values):
+            if value:
+                config[key] = value
 
         data = json.dumps(config)
         with open('cache/config_server.json', 'w') as f:
