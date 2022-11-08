@@ -70,7 +70,6 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 
     def saveConfig(self):
         name = self.nameEdit.text()
-        domain = self.addressEdit.text()
         port = self.portEdit.text()
         root_dir = self.rootEdit.text()
         db_path = self.dbEdit.text()
@@ -81,7 +80,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 
 
         config = self.config
-        values = [name, domain, port, root_dir, db_path, max_cons, max_cons_per_ip, read_limit, write_limit]
+        values = [name, port, root_dir, db_path, max_cons, max_cons_per_ip, read_limit, write_limit]
         keys = config.keys()
 
         for (key, value) in zip(keys, values):
