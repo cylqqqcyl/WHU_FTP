@@ -317,8 +317,8 @@ class Server:
                 if reply == QMessageBox.Yes:
                     try:
                         self.server.authorizer.remove_user(username)
+                        self.server.del_user(username)
                         user_dir = os.path.join(self.server.root_dir, username)
-
                         # shutil是个神奇的玩意:)
                         if os.path.exists(user_dir):
                             shutil.rmtree(user_dir)
