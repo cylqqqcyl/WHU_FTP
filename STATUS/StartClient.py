@@ -262,7 +262,6 @@ class Stats:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
             print(e)
-            # QMessageBox.warning(self.ui, '警告', f'''{e}''')    # 弹窗会卡死
 
     def change_dir(self):
         row = self.ui.tableWidget.currentRow()

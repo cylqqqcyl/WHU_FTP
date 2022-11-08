@@ -1,4 +1,5 @@
 import os
+import shutil
 import threading
 import time
 import json
@@ -314,10 +315,10 @@ class Server:
                     try:
                         self.server.authorizer.remove_user(username)
                         user_dir = os.path.join(self.server.root_dir, username)
-                        # NOTE: 删除用户文件（optional）
-                        # 直接这么删除有问题，会报错[WinError 5] 拒绝访问。暂时为解决
-                        # if os.path.exists(user_dir):
-                        #     os.remove(user_dir)
+
+                        # shutil是个神奇的玩意:)
+                        if os.path.exists(user_dir):
+                            shutil.rmtree(user_dir)
                         print(f'Successfully removed user {username}!')
                         self.update_user_list()
                     except Exception as e:
