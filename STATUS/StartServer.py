@@ -204,6 +204,8 @@ class Server:
                 self.mainWin.stateLbl.setStyleSheet(
                     "color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
                 self.mainWin.stateLbl.setText('状态：已开启')
+                # 显示用户列表
+                self.update_user_list()
 
                 # 显示文件目录
                 self.model.setRootPath(self.server.root_dir)

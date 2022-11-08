@@ -86,8 +86,9 @@ class Ui_ServerWindow(object):
         font.setFamily("微软雅黑")
         font.setPointSize(10)
         self.addressEdit.setFont(font)
+        self.addressEdit.setStyleSheet("background-color: rgb(230,230,230);")
+        self.addressEdit.setReadOnly(True)
         self.addressEdit.setObjectName("addressEdit")
-        self.addressEdit.setFocusPolicy(QtCore.Qt.NoFocus)  # 设置ip地址为只读
         self.gridLayout_6.addWidget(self.addressEdit, 1, 1, 1, 1)
         self.portLbl = QtWidgets.QLabel(self.infoTab)
         self.portLbl.setMinimumSize(QtCore.QSize(100, 0))
@@ -356,3 +357,4 @@ class Ui_ServerWindow(object):
         self.updateBtn.setText(_translate("ServerWindow", "刷新"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.userTab), _translate("ServerWindow", "用户"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.fileTab), _translate("ServerWindow", "文件"))
+

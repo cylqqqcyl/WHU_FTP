@@ -180,6 +180,12 @@ color: rgb(255, 255, 255);</string>
               <pointsize>10</pointsize>
              </font>
             </property>
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(230,230,230);</string>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
           <item row="2" column="0">
