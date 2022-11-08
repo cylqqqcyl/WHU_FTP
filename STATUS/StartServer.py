@@ -145,42 +145,38 @@ class Server:
     def _apply_server(self):
         self.mainWin.stateLbl.setText('状态：应用中……')
         # time.sleep(10) # debug use
+        name = self.mainWin.nameEdit.text()  # seems to be dummy...
+        address = self.mainWin.addressEdit.text()
+        port = self.mainWin.portEdit.text()
+        root_dir = self.mainWin.rootEdit.text()
+        log_path = os.path.join(root_dir, 'LOG.log')  # 根目录下生成日志
+        db_path = self.mainWin.dbEdit.text()
+        max_cons = self.mainWin.maxconEdit.text()
+        max_cons_per_ip = self.mainWin.maxconipEdit.text()
+        read_limit = self.mainWin.readlimEdit.text()
+        write_limit = self.mainWin.writelimEdit.text()
+
+        # NOTE: 避免invalid literal for int() with base 10而卡死
         try:
-            name = self.mainWin.nameEdit.text()  # seems to be dummy...
-            address = self.mainWin.addressEdit.text()
-            port = self.mainWin.portEdit.text()
-            root_dir = self.mainWin.rootEdit.text()
-            log_path = os.path.join(root_dir, 'LOG.log')  # 根目录下生成日志
-            db_path = self.mainWin.dbEdit.text()
-            max_cons = self.mainWin.maxconEdit.text()
-            max_cons_per_ip = self.mainWin.maxconipEdit.text()
-            read_limit = self.mainWin.readlimEdit.text()
-            write_limit = self.mainWin.writelimEdit.text()
+            port = int(port)
+            max_cons = int(max_cons)
+            max_cons_per_ip = int(max_cons_per_ip)
+            read_limit = int(read_limit) * 1024  # GUI上填写的时KB/s
+            write_limit = int(write_limit) * 1024
 
-            # NOTE: 避免invalid literal for int() with base 10而卡死
-            try:
-                port = int(port)
-                max_cons = int(max_cons)
-                max_cons_per_ip = int(max_cons_per_ip)
-                read_limit = int(read_limit) * 1024  # GUI上填写的时KB/s
-                write_limit = int(write_limit) * 1024
+            self.server = WHUFTPServer(
+                address, port,
+                read_limit, write_limit,
+                max_cons, max_cons_per_ip,
+                root_dir, log_path, db_path,
+            )
 
-                self.server = WHUFTPServer(
-                    address, port,
-                    read_limit, write_limit,
-                    max_cons, max_cons_per_ip,
-                    root_dir, log_path, db_path,
-                )
-
-                self.server.apply_server()
-                self.mainWin.applyBtn.setDisabled(True)
-                self.mainWin.startBtn.setDisabled(False)
-                self.mainWin.stateLbl.setStyleSheet(
-                    "color: rgb(255, 255, 255); background-color: rgba(0, 170, 0, 200);")
-                self.mainWin.stateLbl.setText('状态：应用服务器成功！')
-
-            except Exception as e:
-                print(e)
+            self.server.apply_server()
+            self.mainWin.applyBtn.setDisabled(True)
+            self.mainWin.startBtn.setDisabled(False)
+            self.mainWin.stateLbl.setStyleSheet(
+                "color: rgb(255, 255, 255); background-color: rgba(0, 170, 0, 200);")
+            self.mainWin.stateLbl.setText('状态：应用服务器成功！')
 
         except Exception as e:
             print(e)

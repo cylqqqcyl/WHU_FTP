@@ -65,12 +65,11 @@ class WHUFTPServer:
         user_info = cursor.fetchall()
         for username, password in user_info:
             user_dir = os.path.join(self.root_dir, username)
-            # TODO: 是否要为每位用户创建一个单独的home dir? 文件夹名即用户名，如下：
-            # root:
-            # ├───Francis
-            # ├───Jack
-            # ├───Kim
-            # └───Mike
+            try:
+                os.mkdir(user_dir)  # 对每个用户创建文件夹
+            except FileExistsError:
+                pass
+            #需要实现删除用户时，删除对应文件夹
             self.authorizer.add_user(username, password, user_dir, perm="elradfmw")
         cursor.close()
         conn.close()
