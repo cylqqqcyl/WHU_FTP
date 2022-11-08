@@ -125,6 +125,8 @@ class Server:
         self.mainWin.treeView.setModel(self.model)
         self.mainWin.treeView.doubleClicked.connect(self.file_name)  # 打开文件
 
+
+
         self.initSignalSlots()
 
     def initSignalSlots(self):
@@ -140,6 +142,7 @@ class Server:
 
     # 应用服务器
     def apply_server(self):
+        self.close_server()
         thread_apply = threading.Thread(target=self._apply_server)
         thread_apply.setDaemon(True)
         thread_apply.start()
@@ -179,6 +182,7 @@ class Server:
             self.mainWin.stateLbl.setStyleSheet(
                 "color: rgb(255, 255, 255); background-color: rgba(0, 170, 0, 200);")
             self.mainWin.stateLbl.setText('状态：应用服务器成功！')
+            self.mainWin.applyBtn.setDisabled(False)
 
         except Exception as e:
             print(e)
