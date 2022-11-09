@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import *
 # from PySide2.QtUiTools import QUiLoader
 from PyQt5 import uic, QtGui
 from PyQt5.QtCore import QFile
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import PyQt5
 import os
@@ -15,10 +15,22 @@ import sys
 from src import user
 from client import Ui_MainWindow
 from login import Ui_loginForm
+import multiprocessing
 
 dirname = os.path.dirname(PyQt5.__file__)
 plugin_path = os.path.join(dirname, 'plugins', 'platforms')
 os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
+
+
+# NOTE: 无法在子线程中弹窗。故弹窗动作要放在主线程，子线程只负责告诉主线程是否弹窗。
+class MsgThread(QThread):
+    msgSigal = pyqtSignal()  # 弹窗信号
+
+    def __init__(self):
+        super(MsgThread, self).__init__()
+
+    def run(self):
+        self.msgSigal.emit()  # 发送信号至主线程
 
 
 class LoginWin(QDialog, Ui_loginForm):
@@ -151,7 +163,12 @@ class Stats:
         self.local_file = None
         self.local_dir = None
 
+        self.exception = ''
+        self.msgthread = MsgThread()
+        self.msgthread.msgSigal.connect(lambda: self.showMsg(self.exception))
 
+    def showMsg(self, msg):
+        QMessageBox.warning(self.ui, 'Warning', msg)
 
     def download(self):
         self.I += 1
@@ -257,11 +274,12 @@ class Stats:
                         self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(icon, text))
                     else:
                         self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
-
+            # x = 1 / 0  # debug use
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
-            print(e)
+            self.exception = str(e) # e的类型是error，要转成string显示
+            self.msgthread.start()
 
     def change_dir(self):
         row = self.ui.tableWidget.currentRow()
