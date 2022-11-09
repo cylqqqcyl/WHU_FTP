@@ -1,3 +1,4 @@
+import os.path
 from ftplib import FTP
 import datetime
 import argparse
@@ -28,21 +29,26 @@ def ftpconnect(host, username='', password='', port=21):
     print(ftp.getwelcome())
     return ftp
 
+def uploadfile(ftp, localpath, remotepath):
+    # 从本地上传文件到ftp
+    bufsize = 1024
+    uploaded_size = ftp.size(remotepath)  # 断点续传
+    fp = open(localpath, 'rb')
+    fp.seek(uploaded_size)
+    ftp.storbinary('STOR ' + remotepath, fp, bufsize, rest=uploaded_size)
+    ftp.set_debuglevel(0)
+    fp.close()
 
 def downloadfile(ftp, remotepath, localpath):
     # 从ftp下载文件
     bufsize = 1024
-    fp = open(localpath, 'wb')
-    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize)
-    ftp.set_debuglevel(0)
-    fp.close()
-
-
-def uploadfile(ftp, localpath, remotepath):
-    # 从本地上传文件到ftp
-    bufsize = 1024
-    fp = open(localpath, 'rb')
-    ftp.storbinary('STOR ' + remotepath, fp, bufsize)
+    if os.path.exists(localpath):  # 防止续传覆盖
+        fp = open(localpath, 'rb+')
+    else:
+        fp = open(localpath, 'wb')
+    downloaded_size = os.path.getsize(localpath)  # 断点续传
+    fp.seek(downloaded_size)
+    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize, rest=downloaded_size)
     ftp.set_debuglevel(0)
     fp.close()
 
@@ -93,7 +99,7 @@ def main():  # for debugging?
     # parser.add_argument("--localpath", type=str, required=True, help="local file path")
     # parser.add_argument("--remotepath", type=str, required=True, help="remote file path")
 
-    parser.add_argument("--host", type=str, default="172.27.240.1", help="host")
+    parser.add_argument("--host", type=str, default="10.131.153.218", help="host")
     parser.add_argument("--username", type=str, default="user", help="username")
     parser.add_argument("--password", type=str, default="123456", help="password")
     parser.add_argument("--mode", type=str, default='download', help="upload or download")
@@ -104,6 +110,7 @@ def main():  # for debugging?
 
     ftp = ftpconnect(args.host, args.username, args.password)
 
+    downloadfile(ftp,args.remotepath,args.localpath)
     print(get_server_files(ftp))
 
     ftp.quit()
