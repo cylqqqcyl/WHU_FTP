@@ -278,7 +278,7 @@ class Stats:
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
-            self.exception = str(e)  # e的类型时error，要转成string显示
+            self.exception = str(e) # e的类型是error，要转成string显示
             self.msgthread.start()
 
     def change_dir(self):
