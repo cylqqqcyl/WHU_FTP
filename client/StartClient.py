@@ -9,9 +9,9 @@ import PyQt5
 import os
 import sys
 sys.path.append('frontend')
-from src.ClientServer import WHUFTPClient
-from client.frontend.client import Ui_MainWindow
-from client.frontend.login import Ui_loginForm
+from backend.WHUFTPClient import WHUFTPClient
+from frontend.client import Ui_MainWindow
+from frontend.login import Ui_loginForm
 
 dirname = os.path.dirname(PyQt5.__file__)
 plugin_path = os.path.join(dirname, 'plugins', 'platforms')
@@ -38,7 +38,7 @@ class LoginWin(QDialog, Ui_loginForm):
         self.closeBtn.clicked.connect(self.close)
 
         # 获取上次的config
-        with open('../STATUS/cache/config_client.json', "r") as f:
+        with open('cache/config_client.json', "r") as f:
             data = f.read()
         config = json.loads(data)
         self.config = config
@@ -83,7 +83,7 @@ class ClientUI(QMainWindow, Ui_MainWindow):
                 config[key] = value
 
             data = json.dumps(config)
-            with open('../STATUS/cache/config_client.json', 'w') as f:
+            with open('cache/config_client.json', 'w') as f:
                 f.write(data)
 
     def closeEvent(self, e):

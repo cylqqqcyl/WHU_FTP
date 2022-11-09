@@ -35,7 +35,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
 
         self.setupUi(self)
 
-        with open('../STATUS/cache/config_server.json', "r") as f:
+        with open('cache/config_server.json', "r") as f:
             data = f.read()
         config = json.loads(data)
         self.config = config
@@ -86,7 +86,7 @@ class ServerUI(QMainWindow, Ui_ServerWindow):
                 config[key] = value
 
         data = json.dumps(config)
-        with open('../STATUS/cache/config_server.json', 'w') as f:
+        with open('cache/config_server.json', 'w') as f:
             f.write(data)
 
     def closeEvent(self, e):
