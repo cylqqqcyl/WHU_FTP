@@ -264,8 +264,9 @@ class Client:
             self.ui.serverLbl.setText('远程目录列表：')
             root_files = self.ftpuser.get_server_files(self.ftpserver)
 
+            # 清空远程目录
             self.ui.tableWidget.setRowCount(0)
-            self.ui .tableWidget.clearContents()
+            self.ui.tableWidget.clearContents()
 
             for Name, Size, Type, Date in root_files:
                 file = [Name, Size, Type, Date]
