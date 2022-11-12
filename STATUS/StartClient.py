@@ -1,21 +1,17 @@
 import threading
 import json
 import ProcessBar as PB
-# from pb import downloadThread
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWidgets import *
-# from PySide2.QtUiTools import QUiLoader
-from PyQt5 import uic, QtGui
-from PyQt5.QtCore import QFile
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import PyQt5
 import os
 import sys
-from src import user
+from src.ClientServer import WHUFTPClient
 from client import Ui_MainWindow
 from login import Ui_loginForm
-import multiprocessing
+import traceback
 
 dirname = os.path.dirname(PyQt5.__file__)
 plugin_path = os.path.join(dirname, 'plugins', 'platforms')
@@ -104,18 +100,18 @@ class ClientUI(QMainWindow, Ui_MainWindow):
             e.ignore()
 
 
-class Stats:
+class Client:
     def __init__(self):
         # 从文件中加载UI定义
         self.I = 0
+
+        self.ftpuser = None
+        self.username = ''
+        self.password = ''
+
         self.ftpserver = None  # 所连接到的服务器实例
         self.current_remote_dir = None  # 当前服务器目录
-        qfile_stats = QFile("client.ui")
-        qfile_stats.open(QFile.ReadOnly)
-        qfile_stats.close()
-        # 从 UI 定义中动态 创建一个相应的窗口对象
-        # 注意：里面的控件对象也成为窗口对象的属性了
-        # 比如 self.ui.button , self.ui.textEdit
+
         self.loginWin = LoginWin()
         self.ui = ClientUI()
         # self.ui.button.clicked.connect(self.handleCalc)
@@ -153,7 +149,6 @@ class Stats:
         self.icon_file.addPixmap(QPixmap(icon_file_path))
         self.icon_ukn.addPixmap(QPixmap(icon_ukn_path))
         self.server_root = '/'
-        self.is_root = True  # 是否已经在用户目录的根目录
         self.ui.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.ui.tableWidget.verticalHeader().setVisible(False)
         self.ui.tableWidget.doubleClicked.connect(self.change_dir)
@@ -165,16 +160,28 @@ class Stats:
 
         self.exception = ''
         self.msgthread = MsgThread()
-        self.msgthread.msgSigal.connect(lambda: self.showMsg(self.exception))
+        self.msgthread.msgSigal.connect(lambda: self.show_msg(self.exception))
 
-    def showMsg(self, msg):
+    def show_msg(self, msg):
         QMessageBox.warning(self.ui, 'Warning', msg)
+
+    def apply_client(self):
+
+        username = self.ui.nameEdit.text()
+        password = self.ui.pwEdit.text()
+        host = self.ui.domainEdit.text()
+        port = self.ui.portEdit.text()
+
+        try:
+            port = int(port)
+            self.ftpuser = WHUFTPClient(username, password, host, port)
+        except Exception as e:
+            print(e)
+
+
 
     def download(self):
         self.I += 1
-        # user.downloadfile(self.ftpserver, 'test.txt','D:/asoul.txt' )
-        # user.downloadfile(self.ftpserver, 'Francis/file.txt', 'D:/asoul.txt')
-        # user.downloadfile(self.ftpserver, self.remote_file, 'D:/asoul.txt')
         tmp = -1
         while (self.remote_file[tmp] != '/'):
             tmp -= 1
@@ -244,19 +251,22 @@ class Stats:
         thread.start()
 
     def _connect_server(self):
+
+        self.apply_client()
+
         self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
         self.ui.serverLbl.setText('远程目录列表（连接中……）：')
         try:
-            self.ftpserver = user.ftpconnect(
-                host=self.ui.domainEdit.text(),
-                username=self.ui.nameEdit.text(),
-                password=self.ui.pwEdit.text(),
-                port=int(self.ui.portEdit.text()))
+            self.ftpserver = self.ftpuser.connect_server()
             self.current_remote_dir = self.ftpserver.pwd()
 
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(0, 170, 255, 200);")
             self.ui.serverLbl.setText('远程目录列表：')
-            root_files = user.get_server_files(self.ftpserver)
+            root_files = self.ftpuser.get_server_files(self.ftpserver)
+
+            self.ui.tableWidget.setRowCount(0)
+            self.ui .tableWidget.clearContents()
+
             for Name, Size, Type, Date in root_files:
                 file = [Name, Size, Type, Date]
 
@@ -278,7 +288,8 @@ class Stats:
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
-            self.exception = str(e) # e的类型是error，要转成string显示
+            # traceback.print_exc() # debug use
+            self.exception = str(e)
             self.msgthread.start()
 
     def change_dir(self):
@@ -287,13 +298,13 @@ class Stats:
         target_dir = self.ui.tableWidget.item(row, 0).text()
         # print("ddddddddddddddddddddddddddddddddddddd"+target_dir)
         # print("[pppppppppppppppppppppppppppppppppppp"+target_type)
-        cur_dir = user.get_server_files(self.ftpserver)
+        cur_dir = self.ftpuser.get_server_files(self.ftpserver)
         # user.downloadfile(self.ftpserver, target_dir, 'D:/asoul.txt')
 
         # 返回上一级目录
         if row == 0 and target_dir == '..' and cur_dir != '/':
             self.ftpserver.cwd('..')
-            files = user.get_server_files(self.ftpserver)
+            files = self.ftpuser.get_server_files(self.ftpserver)
             cur_dir = self.ftpserver.pwd()
             if cur_dir == '/':  # 回到了根目录
                 self.ui.tableWidget.setRowCount(0)
@@ -306,7 +317,7 @@ class Stats:
         # 进入子目录
         elif target_type == 'dir':
             self.ftpserver.cwd(target_dir)
-            files = user.get_server_files(self.ftpserver)
+            files =self.ftpuser.get_server_files(self.ftpserver)
             self.ui.tableWidget.setRowCount(1)
             self.ui.tableWidget.clearContents()
             for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
@@ -355,7 +366,7 @@ class Stats:
 
 
 app = QApplication([])
-stats = Stats()
+stats = Client()
 stats.loginWin.exec()
 stats.ui.show()
 sys.exit(app.exec())  # 安全结束
