@@ -48,3 +48,7 @@ pip install PyQt5
 **一个管理端界面的例子如下（11月8日版本）**
 
 ![管理FTP界面](figures/server1108.png)
+
+## Backend
+
+后端主要使用pyftpdlib进行实现，支持上传下载、断点续传等功能。
