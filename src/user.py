@@ -1,3 +1,4 @@
+import ftplib
 import os.path
 from ftplib import FTP
 import datetime
@@ -32,7 +33,11 @@ def ftpconnect(host, username='', password='', port=21):
 def uploadfile(ftp, localpath, remotepath):
     # 从本地上传文件到ftp
     bufsize = 1024
-    uploaded_size = ftp.size(remotepath)  # 断点续传
+    try:
+        ftp.voidcmd('TYPE I')  # 设置为二进制模式
+        uploaded_size = ftp.size(remotepath)  # 断点续传
+    except ftplib.error_perm:  # 如果还没有开始上传，那么uploaded_size=0
+        uploaded_size=0
     fp = open(localpath, 'rb')
     fp.seek(uploaded_size)
     ftp.storbinary('STOR ' + remotepath, fp, bufsize, rest=uploaded_size)
@@ -99,18 +104,19 @@ def main():  # for debugging?
     # parser.add_argument("--localpath", type=str, required=True, help="local file path")
     # parser.add_argument("--remotepath", type=str, required=True, help="remote file path")
 
-    parser.add_argument("--host", type=str, default="10.131.153.218", help="host")
-    parser.add_argument("--username", type=str, default="user", help="username")
+    parser.add_argument("--host", type=str, default="10.131.149.36", help="host")
+    parser.add_argument("--username", type=str, default="Francis", help="username")
     parser.add_argument("--password", type=str, default="123456", help="password")
-    parser.add_argument("--mode", type=str, default='download', help="upload or download")
-    parser.add_argument("--localpath", type=str, default='local_dir/local.txt', help="local file path")
-    parser.add_argument("--remotepath", type=str, default='user_dir/local.txt', help="remote file path")
+    parser.add_argument("--mode", type=str, default='upload', help="upload or download")
+    parser.add_argument("--localpath", type=str, default='../local_dir/local.txt', help="local file path")
+    parser.add_argument("--remotepath", type=str, default='local.txt', help="remote file path")
 
     args = parser.parse_args()
 
     ftp = ftpconnect(args.host, args.username, args.password)
 
-    downloadfile(ftp,args.remotepath,args.localpath)
+    # downloadfile(ftp,args.remotepath,args.localpath)
+    uploadfile(ftp,args.localpath,args.remotepath)
     print(get_server_files(ftp))
 
     ftp.quit()
