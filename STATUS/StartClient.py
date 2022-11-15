@@ -120,11 +120,11 @@ class Client:
         self.ui.eButton.clicked.connect(self.exit)  # 退出按键操作
         self.ui.ulButton.clicked.connect(self.upload)  # 上传按键操作
         self.ui.dButton.clicked.connect(self.download)  # 下载按键操作
-        self.ui.upButton.setEnabled(False)  # 返回上层按键禁止
         self.ui.ulButton.setEnabled(False)  # 上传按键禁止
         self.ui.dButton.setEnabled(False)  # 下载按键禁止
-        self.ui.qButton.clicked.connect(self.connect_server)  # 查询按键操作
-
+        self.ui.connectBtn.clicked.connect(self.connect_server)  # 连接服务器
+        self.ui.disconnectBtn.setDisabled(True) # 断开连接
+        self.ui.disconnectBtn.clicked.connect(self.disconnect_server)
         self.loginWin.connectBtn.clicked.connect(self.connect_shortcut)
 
         self.client_root = 'home'
@@ -245,6 +245,10 @@ class Client:
         self.loginWin.close()
 
     def connect_server(self):
+
+        # 禁用connect button
+        self.ui.connectBtn.setDisabled(True)
+
         # 注册线程来连接服务器，防止服务器未开启等情况时客户端卡死
         thread = threading.Thread(target=self._connect_server)
         thread.setDaemon(True)
@@ -285,6 +289,9 @@ class Client:
                         self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(icon, text))
                     else:
                         self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
+
+            # 启用disconnect button
+            self.ui.disconnectBtn.setDisabled(False)
             # x = 1 / 0  # debug use
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
@@ -292,6 +299,22 @@ class Client:
             # traceback.print_exc() # debug use
             self.exception = str(e)
             self.msgthread.start()
+            # 启用connect button
+            self.ui.connectBtn.setDisabled(False)
+
+    def disconnect_server(self):
+        self.ui.disconnectBtn.setDisabled(True)
+        self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
+        self.ui.serverLbl.setText('远程目录列表（未连接）：')
+        self.ftpserver.quit()
+        self.ftpserver = None
+        # 清空远程目录
+        self.ui.tableWidget.setRowCount(0)
+        self.ui.tableWidget.clearContents()
+
+        self.ui.connectBtn.setDisabled(False)
+
+
 
     def change_dir(self):
         row = self.ui.tableWidget.currentRow()
