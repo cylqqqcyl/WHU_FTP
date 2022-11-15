@@ -78,7 +78,7 @@ background-color: rgba(0, 170, 255, 150);</string>
             <number>0</number>
            </property>
            <item>
-            <widget class="QPushButton" name="qButton">
+            <widget class="QPushButton" name="connectBtn">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -95,12 +95,12 @@ background-color: rgba(0, 170, 255, 150);</string>
               <string notr="true">background-color: rgba(255, 255, 255, 200);</string>
              </property>
              <property name="text">
-              <string>查询</string>
+              <string>连接</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="upButton">
+            <widget class="QPushButton" name="disconnectBtn">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -117,7 +117,7 @@ background-color: rgba(0, 170, 255, 150);</string>
               <string notr="true">background-color: rgba(255, 255, 255, 200);</string>
              </property>
              <property name="text">
-              <string>上一层</string>
+              <string>断开</string>
              </property>
             </widget>
            </item>
