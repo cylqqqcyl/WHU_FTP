@@ -186,27 +186,17 @@ class Client:
         remote_dir = self.ftpserver.pwd()[1:]  # 获取当前远程目录
         file_name = self.ui.tableWidget.selectedItems()[0].text()  # 当前选中的文件名 (可以考虑多选中多下载)
         remote_file = remote_dir + '/' + file_name  # 当前选中的文件远程路径
-        # user.downloadfile(self.ftpserver, self.remote_file, self.local_dir + self.remote_file[tmp:])
-        # downLoader = downloadThread(self.local_dir + self.remote_file[tmp:], self.remote_file, self.ftpserver)  # 实例化一个下载类，并传入下载链接和保存路径
-        # downLoader.download_proess_signal.connect(downLoader.change_progressbar_value)  # 处理下载类的信号
-        # downLoader.start()  # 开启子线程
-        # downLoader.exec()  # 保护子线程，否则主线程调用函数结束的时候子线程也被迫退出3.
-        PB.download_ftp(self.ftpserver, os.path.join(self.local_dir,file_name), remote_file)
-
+        self.ftpuser.download_file(self.ftpserver, remote_file, os.path.join(self.local_dir, file_name))
         return 0
 
     def upload(self):
-        tmp = -1
-        while (self.local_file[tmp] != '/'):
-            tmp -= 1
-        # user.uploadfile(self.ftpserver, self.local_file, '/' + self.remote_dir + self.local_file[tmp:])
-        PB.upload_file(self.ftpserver, self.local_file, '/' + self.remote_dir + self.local_file[tmp:])
+        # 远程目录自动切换，不需要再在本地文件名前加上远程目录
+        self.ftpuser.upload_file(self.ftpserver, self.local_file, self.local_file.split('/')[-1])
+        # 上传后刷新远程文件目录
+        self.refresh_dir()
 
     def file_name(self, Qmodelidx):
         tm_path = self.modelt.filePath(Qmodelidx)
-        # print(self.modelt.fileInfo(Qmodelidx).suffix())
-        # print(self.modelt.filePath(Qmodelidx))  # 输出文件的地址。
-        # print(self.modelt.fileName(Qmodelidx))  # 输出文件名
         if os.path.isfile(tm_path):  # 本地当前选中为文件
             self.local_file = tm_path
             self.ui.ulButton.setEnabled(True and self.remote_dir != None)  # 上传按键允许
@@ -331,7 +321,7 @@ class Client:
         # 进入子目录
         elif target_type == 'dir':
             self.ftpserver.cwd(target_dir)
-            files =self.ftpuser.get_server_files(self.ftpserver)
+
             self.ui.tableWidget.setRowCount(1)
             self.ui.tableWidget.clearContents()
             for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
@@ -342,6 +332,21 @@ class Client:
             return
 
         # 显示当前目录的文件并贴上图标
+        self.refresh_dir()
+        self.remote_dir = self.ftpserver.pwd()[1:]
+
+    def refresh_dir(self):
+        # 刷新当前目录
+        files = self.ftpuser.get_server_files(self.ftpserver)
+        cur_dir = self.ftpserver.pwd()
+        if cur_dir == '/':  # 回到了根目录
+            self.ui.tableWidget.setRowCount(0)
+            self.ui.tableWidget.clearContents()
+        else:  # 不是根目录
+            self.ui.tableWidget.setRowCount(1)  # 第一行用于返回上一级目录
+            self.ui.tableWidget.clearContents()
+            for col, text in enumerate(['..', ' ', ' ', ' ', ' ']):
+                self.ui.tableWidget.setItem(0, col, QTableWidgetItem(text))
         for Name, Size, Type, Date in files:
             file = [Name, Size, Type, Date]
             if file[-2] == 'file':
@@ -359,21 +364,12 @@ class Client:
                 else:
                     self.ui.tableWidget.setItem(row_count, col, QTableWidgetItem(text))
 
-        self.remote_dir = self.ftpserver.pwd()[1:]
-
     def file_selected(self):
         row = self.ui.tableWidget.currentRow()
         target_type = self.ui.tableWidget.item(row, 2).text()
-        target_dir = self.ui.tableWidget.item(row, 0).text()
-        print(self.ui.tableWidget.selectedItems()[0].text())
-        if target_type != 'file':
-            self.remote_file = None
+        if target_type != 'file' or self.local_file is not None: # 选择的不是文件或者没有选中本地目录
             self.ui.dButton.setEnabled(False)  # 下载按键禁止
         else:
-            if self.remote_dir != '/':
-                self.remote_file = self.ftpserver.pwd() + '/' + target_dir
-            else:
-                self.remote_file = target_dir
             self.ui.dButton.setEnabled(True)  # 下载按键允许
         return
 
