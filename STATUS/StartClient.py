@@ -1,6 +1,5 @@
 import threading
 import json
-import ProcessBar as PB
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
