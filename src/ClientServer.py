@@ -8,6 +8,7 @@ import sys
 import os
 import os.path
 from ftplib import FTP
+import ftplib
 import datetime
 import argparse
 from datetime import datetime
@@ -161,7 +162,11 @@ class WHUFTPClient:
     def upload_file(ftp, local_path, remote_path):
         # 从本地上传文件到ftp
         buffer_size = 1024
-        uploaded_size = ftp.size(remote_path)  # 断点续传
+        try:
+            ftp.voidcmd('TYPE I')  # 设置为二进制模式
+            uploaded_size = ftp.size(remote_path)  # 断点续传
+        except ftplib.error_perm:  # 如果还没有开始上传，那么uploaded_size=0
+            uploaded_size = 0
         fp = open(local_path, 'rb')
         fp.seek(uploaded_size)
         ftp.storbinary('STOR ' + remote_path, fp, buffer_size, rest=uploaded_size)

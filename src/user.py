@@ -3,6 +3,7 @@ import os.path
 from ftplib import FTP
 import datetime
 import argparse
+import socket
 from datetime import datetime
 
 
@@ -97,12 +98,6 @@ def get_server_files(ftp):
 
 def main():  # for debugging?
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--host", type=str, default="172.16.20.1", help="host")
-    # parser.add_argument("--username", type=str, default="user", help="username")
-    # parser.add_argument("--password", type=str, default="123456", help="password")
-    # parser.add_argument("--mode", type=str, required=True, help="upload or download")
-    # parser.add_argument("--localpath", type=str, required=True, help="local file path")
-    # parser.add_argument("--remotepath", type=str, required=True, help="remote file path")
 
     parser.add_argument("--host", type=str, default="10.131.149.36", help="host")
     parser.add_argument("--username", type=str, default="Francis", help="username")
