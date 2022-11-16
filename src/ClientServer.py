@@ -159,7 +159,7 @@ class WHUFTPClient:
         return ftp
 
     @staticmethod
-    def upload_file(ftp, local_path, remote_path):
+    def upload_file(ftp, local_path, remote_path, callback=None):
         # 从本地上传文件到ftp
         buffer_size = 1024
         try:
@@ -169,12 +169,11 @@ class WHUFTPClient:
             uploaded_size = 0
         fp = open(local_path, 'rb')
         fp.seek(uploaded_size)
-        ftp.storbinary('STOR ' + remote_path, fp, buffer_size, rest=uploaded_size)
-        ftp.set_debuglevel(0)
+        ftp.storbinary('STOR ' + remote_path, fp, buffer_size, rest=uploaded_size, callback=callback)
         fp.close()
 
     @staticmethod
-    def download_file(ftp, remote_path, local_path):
+    def download_file(ftp, remote_path, local_path, callback=None):
         # 从ftp下载文件
         buffer_size = 1024
         if os.path.exists(local_path):  # 防止续传覆盖
@@ -183,7 +182,7 @@ class WHUFTPClient:
             fp = open(local_path, 'wb')
         downloaded_size = os.path.getsize(local_path)  # 断点续传
         fp.seek(downloaded_size)
-        ftp.retrbinary('RETR ' + remote_path, fp.write, buffer_size, rest=downloaded_size)
+        ftp.retrbinary('RETR ' + remote_path, fp.write, buffer_size, rest=downloaded_size,callback=callback)
         ftp.set_debuglevel(0)
         fp.close()
 
