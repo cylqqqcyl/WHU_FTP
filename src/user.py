@@ -99,19 +99,19 @@ def get_server_files(ftp):
 def main():  # for debugging?
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--host", type=str, default="10.131.149.36", help="host")
+    parser.add_argument("--host", type=str, default="10.131.163.247", help="host")
     parser.add_argument("--username", type=str, default="Francis", help="username")
     parser.add_argument("--password", type=str, default="123456", help="password")
     parser.add_argument("--mode", type=str, default='upload', help="upload or download")
-    parser.add_argument("--localpath", type=str, default='../local_dir/local.txt', help="local file path")
-    parser.add_argument("--remotepath", type=str, default='local.txt', help="remote file path")
+    parser.add_argument("--localpath", type=str, default='../local_dir/audio.wav', help="local file path")
+    parser.add_argument("--remotepath", type=str, default='audio.wav', help="remote file path")
 
     args = parser.parse_args()
 
     ftp = ftpconnect(args.host, args.username, args.password)
 
-    # downloadfile(ftp,args.remotepath,args.localpath)
-    uploadfile(ftp,args.localpath,args.remotepath)
+    downloadfile(ftp,args.remotepath,args.localpath)
+    # uploadfile(ftp,args.localpath,args.remotepath)
     print(get_server_files(ftp))
 
     ftp.quit()

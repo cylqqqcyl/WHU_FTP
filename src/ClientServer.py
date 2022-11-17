@@ -7,7 +7,7 @@ import sqlite3
 import sys
 import os
 import os.path
-from ftplib import FTP
+from src.FTP_user import FTP_user as FTP
 import ftplib
 import datetime
 import argparse
@@ -205,7 +205,6 @@ class WHUFTPClient:
                 file_name, meta = file_data
                 # i.e directory, file or link, etc
                 file_type = meta.get("type")
-                print(file_type)
                 if file_type == "file":
                     # if it is a file, change type of transfer data to IMAGE/binary
                     ftp.voidcmd("TYPE I")
