@@ -182,11 +182,10 @@ class Client:
 
 
     def download(self):
-        callback = None # 回调函数
         remote_dir = self.ftpserver.pwd()[1:]  # 获取当前远程目录
         file_name = self.ui.tableWidget.selectedItems()[0].text()  # 当前选中的文件名 (可以考虑多选中多下载)
         remote_file = remote_dir + '/' + file_name  # 当前选中的文件远程路径
-        self.ftpuser.download_file(self.ftpserver, remote_file, os.path.join(self.local_dir, file_name),callback=callback)
+        self.ftpuser.download_file(self.ftpserver, remote_file, os.path.join(self.local_dir, file_name))
         return 0
 
     def upload(self):
