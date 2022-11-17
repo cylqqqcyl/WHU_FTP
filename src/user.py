@@ -1,6 +1,6 @@
 import ftplib
 import os.path
-from ftplib import FTP
+from FTP_user import FTP_user as FTP
 import datetime
 import argparse
 import socket

@@ -232,7 +232,7 @@ class FTP_user:
           回复.
         """
         self.voidcmd('TYPE I')
-        with self.transfercmd(cmd, rest) as conn:
+        with self.transfercmd(cmd, rest)[0] as conn:
             while 1:
                 data = conn.recv(blocksize)
                 if not data:
