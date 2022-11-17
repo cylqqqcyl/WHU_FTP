@@ -8,6 +8,7 @@ import sys
 import os
 import os.path
 from src.FTP_user import FTP_user as FTP
+from src.FTP_user import error_perm
 import ftplib
 import datetime
 import argparse
@@ -165,7 +166,7 @@ class WHUFTPClient:
         try:
             ftp.voidcmd('TYPE I')  # 设置为二进制模式
             uploaded_size = ftp.size(remote_path)  # 断点续传
-        except ftplib.error_perm:  # 如果还没有开始上传，那么uploaded_size=0
+        except error_perm:  # 如果还没有开始上传，那么uploaded_size=0
             uploaded_size = 0
         fp = open(local_path, 'rb')
         fp.seek(uploaded_size)

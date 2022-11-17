@@ -1,6 +1,7 @@
 import ftplib
 import os.path
 from FTP_user import FTP_user as FTP
+from FTP_user import error_perm
 import datetime
 import argparse
 import socket
@@ -37,7 +38,7 @@ def uploadfile(ftp, localpath, remotepath):
     try:
         ftp.voidcmd('TYPE I')  # 设置为二进制模式
         uploaded_size = ftp.size(remotepath)  # 断点续传
-    except ftplib.error_perm:  # 如果还没有开始上传，那么uploaded_size=0
+    except error_perm:  # 如果还没有开始上传，那么uploaded_size=0
         uploaded_size=0
     fp = open(localpath, 'rb')
     fp.seek(uploaded_size)
@@ -103,15 +104,15 @@ def main():  # for debugging?
     parser.add_argument("--username", type=str, default="Francis", help="username")
     parser.add_argument("--password", type=str, default="123456", help="password")
     parser.add_argument("--mode", type=str, default='upload', help="upload or download")
-    parser.add_argument("--localpath", type=str, default='../local_dir/audio.wav', help="local file path")
-    parser.add_argument("--remotepath", type=str, default='audio.wav', help="remote file path")
+    parser.add_argument("--localpath", type=str, default='../local_dir/test.txt', help="local file path")
+    parser.add_argument("--remotepath", type=str, default='test.txt', help="remote file path")
 
     args = parser.parse_args()
 
     ftp = ftpconnect(args.host, args.username, args.password)
 
-    downloadfile(ftp,args.remotepath,args.localpath)
-    # uploadfile(ftp,args.localpath,args.remotepath)
+    # downloadfile(ftp,args.remotepath,args.localpath)
+    uploadfile(ftp,args.localpath,args.remotepath)
     print(get_server_files(ftp))
 
     ftp.quit()
