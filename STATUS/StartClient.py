@@ -251,7 +251,7 @@ class Client:
         thread.start()
 
         # 下载中
-        while True:
+        while thread.is_alive():
             if os.path.exists(local_path):
                 cur_size = os.path.getsize(local_path)
                 increment = cur_size - old_size
@@ -267,23 +267,14 @@ class Client:
                 if cur_size == target_size:
                     end_time = QTableWidgetItem(time.asctime())
                     print(f'{file_name}已下载完成！')
-                    break
 
         # 下载完成，减去该任务的target_size
         self.target_download_size -= target_size
         self.cur_download_size -= target_size
 
         # 插入结束时间
-        for i in range(101):
-            time.sleep((0.00001))
-            self.ui.DownloadBar.setValue(i)
-
         self.ui.DownloadList.setItem(row_count, 3, end_time)
 
-        # 所有任务完成，清空progress bar
-        if self.cur_download_size == self.target_download_size:
-            self.ui.DownloadBar.setValue(0)
-            self.ui.DfileName.setText('')
 
     def upload_callback(self, buf):
         # this function is called on each block of data after it is sent.
@@ -339,9 +330,6 @@ class Client:
         thread.join()
         end_time = QTableWidgetItem(time.asctime())
         print(3)
-        if self.cur_upload_count == self.target_upload_count:
-            self.ui.UploadBar.setValue(0)
-            self.ui.UfileName.setText('')
 
         self.ui.UploadList.setItem(row_count, 3, end_time)
         self.refresh_dir()
