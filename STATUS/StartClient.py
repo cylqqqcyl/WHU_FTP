@@ -221,8 +221,7 @@ class Client:
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
         assert local_dir is not None
         file_name = self.ui.tableWidget.selectedItems()[0].text()  # 当前选中的文件名 (可以考虑多选中多下载)
-        remote_dir = self.ftpserver.pwd()
-        remote_path = os.path.join(remote_dir, file_name)
+        remote_path = file_name
 
         local_path = os.path.join(local_dir, file_name)
 
@@ -304,8 +303,7 @@ class Client:
 
         file_name = os.path.split(local_path)[1]
 
-        remote_dir = self.ftpserver.pwd()
-        remote_path = os.path.join(remote_dir, file_name)
+        remote_path = file_name
 
         file_name_qt = QTableWidgetItem(file_name)
         self.ui.UploadList.setItem(row_count, 0, file_name_qt)
