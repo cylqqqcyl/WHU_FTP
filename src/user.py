@@ -1,12 +1,13 @@
-import ftplib
 import os.path
-from FTP_user import FTP_user as FTP
-from FTP_user import error_perm
+from ftplib import FTP
 import datetime
 import argparse
-import socket
 from datetime import datetime
-
+import STATUS.ProcessBar as Pb
+import time
+filesize = 0
+current_size = 0
+bar = None
 
 def get_size_format(n, suffix="B"):
     # converts bytes to scaled format (e.g KB, MB, etc.)
@@ -35,11 +36,7 @@ def ftpconnect(host, username='', password='', port=21):
 def uploadfile(ftp, localpath, remotepath):
     # 从本地上传文件到ftp
     bufsize = 1024
-    try:
-        ftp.voidcmd('TYPE I')  # 设置为二进制模式
-        uploaded_size = ftp.size(remotepath)  # 断点续传
-    except error_perm:  # 如果还没有开始上传，那么uploaded_size=0
-        uploaded_size=0
+    uploaded_size = ftp.size(remotepath)  # 断点续传
     fp = open(localpath, 'rb')
     fp.seek(uploaded_size)
     ftp.storbinary('STOR ' + remotepath, fp, bufsize, rest=uploaded_size)
@@ -48,16 +45,53 @@ def uploadfile(ftp, localpath, remotepath):
 
 def downloadfile(ftp, remotepath, localpath):
     # 从ftp下载文件
+    global bar
+    global filesize
+    global fpdownload
+    global downloaded_size
+    # bar = Pb.PopupProgressBar('ftp download file: ' + remotepath)
+    # bar.start()
     bufsize = 1024
+    filesize = ftp.size(remotepath)
+    print("filesize")
+    try:
+        print(filesize)
+    except filesize==0:
+        print("为零")
     if os.path.exists(localpath):  # 防止续传覆盖
-        fp = open(localpath, 'rb+')
+        fpdownload = open(localpath, 'rb+')
     else:
-        fp = open(localpath, 'wb')
+        fpdownload = open(localpath, 'wb')
     downloaded_size = os.path.getsize(localpath)  # 断点续传
-    fp.seek(downloaded_size)
-    ftp.retrbinary('RETR ' + remotepath, fp.write, bufsize, rest=downloaded_size)
+    print("downloaded1")
+    print(downloaded_size)
+    fpdownload.seek(downloaded_size)
+    ftp.retrbinary('RETR ' + remotepath, fpdownload.write, bufsize, rest=downloaded_size)
+    print("downloaded2")
+    print(downloaded_size)
+    # if filesize == 0:
+    #     time.sleep(5)
+    #     bar.stop()
     ftp.set_debuglevel(0)
-    fp.close()
+    fpdownload.close()
+
+def download_file_cb(block):
+    global current_size
+    # 写文件到本地
+    # 显示下载进度
+    current_size = current_size + len(block)
+    print("current_size")
+    try:
+        print(current_size)
+    except current_size==0:
+        print("错误")
+    tmp = 50
+    bar.value = tmp
+    bar.text = format(tmp, '.2f') + '%'
+    if bar.value >= 100:
+        time.sleep(10)
+        bar.stop()
+    fpdownload.write(block)
 
 
 def get_server_files(ftp):
@@ -97,26 +131,31 @@ def get_server_files(ftp):
     return remote_files
 
 
-def main():  # for debugging?
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--host", type=str, default="10.131.163.247", help="host")
-    parser.add_argument("--username", type=str, default="Francis", help="username")
-    parser.add_argument("--password", type=str, default="123456", help="password")
-    parser.add_argument("--mode", type=str, default='upload', help="upload or download")
-    parser.add_argument("--localpath", type=str, default='../local_dir/audio.wav', help="local file path")
-    parser.add_argument("--remotepath", type=str, default='audio.wav', help="remote file path")
-
-    args = parser.parse_args()
-
-    ftp = ftpconnect(args.host, args.username, args.password)
-
-    downloadfile(ftp,args.remotepath,args.localpath)
-    # uploadfile(ftp,args.localpath,args.remotepath)
-    print(get_server_files(ftp))
-
-    ftp.quit()
-
-
-if __name__ == "__main__":
-    main()
+# def main():  # for debugging?
+#     parser = argparse.ArgumentParser()
+#     # parser.add_argument("--host", type=str, default="172.16.20.1", help="host")
+#     # parser.add_argument("--username", type=str, default="user", help="username")
+#     # parser.add_argument("--password", type=str, default="123456", help="password")
+#     # parser.add_argument("--mode", type=str, required=True, help="upload or download")
+#     # parser.add_argument("--localpath", type=str, required=True, help="local file path")
+#     # parser.add_argument("--remotepath", type=str, required=True, help="remote file path")
+#
+#     parser.add_argument("--host", type=str, default="192.168.3.60", help="host")
+#     parser.add_argument("--username", type=str, default="wql", help="username")
+#     parser.add_argument("--password", type=str, default="123456", help="password")
+#     parser.add_argument("--mode", type=str, default='download', help="upload or download")
+#     parser.add_argument("--localpath", type=str, default='local_dir/local.txt', help="local file path")
+#     parser.add_argument("--remotepath", type=str, default='user_dir/local.txt', help="remote file path")
+#
+#     args = parser.parse_args()
+#
+#     ftp = ftpconnect(args.host, args.username, args.password)
+#
+#     downloadfile(ftp,args.remotepath,args.localpath)
+#     print(get_server_files(ftp))
+#
+#     ftp.quit()
+#
+#
+# # if __name__ == "__main__":
+# #     main()
