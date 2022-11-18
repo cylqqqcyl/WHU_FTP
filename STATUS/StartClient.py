@@ -19,6 +19,13 @@ plugin_path = os.path.join(dirname, 'plugins', 'platforms')
 os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
 
 
+class EmitStr(QObject):  # 日志输出类
+    textWrite = pyqtSignal(str)  # 定义一个发送str的信号
+
+    def write(self, text):
+        self.textWrite.emit(str(text))
+
+
 # NOTE: 无法在子线程中弹窗。故弹窗动作要放在主线程，子线程只负责告诉主线程是否弹窗。
 class MsgThread(QThread):
     msgSigal = pyqtSignal()  # 弹窗信号
@@ -28,41 +35,6 @@ class MsgThread(QThread):
 
     def run(self):
         self.msgSigal.emit()  # 发送信号至主线程
-
-
-class TransWin(QDialog, Ui_Form):
-    def __init__(self, parent=None):
-        super(TransWin, self).__init__(parent)
-
-        self.setupUi(self)
-
-        self.CloseBtn.clicked.connect(self.close)
-
-        # 设置一个值表示进度条的当前进度
-        self.pv = 0
-        # 声明一个时钟控件
-        # self.timer1 = QBasicTimer()
-
-        '''设置下载页面进度条参数'''
-        self.DownloadBar.setStyleSheet(
-            "QProgressBar { border: 2px solid grey; border-radius: 5px; color: rgb(20,20,20);"
-            "  background-color: #FFFFFF; text-align: center;}QProgressBar::chunk {background-color: rgb(100,200,200); "
-            "border-radius: 10px; margin: 0.1px;  width: 1px;}")
-        self.DownloadBar.setMinimum(0)  # 设置进度条的范围
-        self.DownloadBar.setMaximum(100)
-        self.DownloadBar.setValue(self.pv)  # 设置当前值
-        self.DownloadBar.setFormat(
-            'Loaded  %p%'.format(self.DownloadBar.value() - self.DownloadBar.minimum()))  # 设置进度条文字格式
-
-        '''设置上传页面进度条参数'''
-        self.UploadBar.setStyleSheet(
-            "QProgressBar { border: 2px solid grey; border-radius: 5px; color: rgb(20,20,20);"
-            "  background-color: #FFFFFF; text-align: center;}QProgressBar::chunk {background-color: rgb(100,200,200); "
-            "border-radius: 10px; margin: 0.1px;  width: 1px;}")
-        self.UploadBar.setMinimum(0)
-        self.UploadBar.setMaximum(100)
-        self.UploadBar.setValue(self.pv)
-        self.UploadBar.setFormat('Loaded  %p%'.format(self.UploadBar.value() - self.UploadBar.minimum()))
 
 
 class LoginWin(QDialog, Ui_loginForm):
@@ -103,6 +75,10 @@ class ClientUI(QMainWindow, Ui_MainWindow):
 
         self.loginWin = LoginWin()
 
+        # transmission log
+        sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+
     def saveConfig(self):
         name = 'whuftp'
         username = self.nameEdit.text()
@@ -121,6 +97,13 @@ class ClientUI(QMainWindow, Ui_MainWindow):
             data = json.dumps(config)
             with open('cache/config_client.json', 'w') as f:
                 f.write(data)
+
+    def outputWriteInfo(self, text):
+        self.logBrowser.append(text)
+
+    def outputWriteError(self, text):
+        # 错误信息用红色输出
+        self.logBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
 
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
@@ -198,10 +181,10 @@ class Client:
         self.local_dir = None
         self.cur_upload_size = 0.0  # 已上传文件总量
         self.cur_download_size = 0.0  # 已下载文件总量
-        self.target_upload_size = 0.0 # 上传文件总量
-        self.target_download_size = 0.0 # 下载文件总量
-        self.pv_download = 0.0   # 下载进度
-        self.pv_upload = 0.0 # 上传进度
+        self.target_upload_size = 0.0  # 上传文件总量
+        self.target_download_size = 0.0  # 下载文件总量
+        self.pv_download = 0.0  # 下载进度
+        self.pv_upload = 0.0  # 上传进度
 
         self.exception = ''
         self.msgthread = MsgThread()
@@ -233,7 +216,6 @@ class Client:
             pass
 
     def _download(self, local_dir):
-        # 选择保存文件夹
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
         assert local_dir is not None
         file_name = self.ui.tableWidget.selectedItems()[0].text()  # 当前选中的文件名 (可以考虑多选中多下载)
@@ -278,9 +260,9 @@ class Client:
 
                 self.pv_download = int(100 * (self.cur_download_size / self.target_download_size))
                 self.ui.DownloadBar.setValue(self.pv_download)
-                # self.ui.DownloadBar
                 if cur_size == target_size:
                     end_time = QTableWidgetItem(time.asctime())
+                    print(f'{file_name}已下载完成！')
                     break
 
         # 下载完成，减去该任务的target_size
@@ -305,8 +287,8 @@ class Client:
         callback = None  # 回调函数
 
         # 在传输列表中插入一行
-        row_count = self.trans.UploadList.rowCount()  # 当前行数
-        self.trans.UploadList.insertRow(int(row_count))  # 当前行后插入
+        row_count = self.ui.UploadList.rowCount()  # 当前行数
+        self.ui.UploadList.insertRow(int(row_count))  # 当前行后插入
 
         tmp = -1
         while (self.local_file[tmp] != '/'):
@@ -314,28 +296,28 @@ class Client:
 
         # 插入文件名
         file_name = QTableWidgetItem(self.local_file[tmp + 1:])
-        self.trans.UploadList.setItem(row_count, 0, file_name)
-        self.trans.UfileName.setText(self.local_file[tmp + 1:])
+        self.ui.UploadList.setItem(row_count, 0, file_name)
+        self.ui.UfileName.setText(self.local_file[tmp + 1:])
 
         # 插入开始时间
         start_time = QTableWidgetItem(time.asctime())
-        self.trans.UploadList.setItem(row_count, 2, start_time)
+        self.ui.UploadList.setItem(row_count, 2, start_time)
         # 插入文件大小
         file_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
         file_size = QTableWidgetItem(file_size)
-        self.trans.UploadList.setItem(row_count, 1, file_size)
+        self.ui.UploadList.setItem(row_count, 1, file_size)
 
         '''
         1.下面一行代码会报错（闪退），注释后可正常运行其余部分
         2.代码主要实现文件上传
         3.该部分与图界面进度条交互未实现
         '''
-        self.ftpuser.upload_file(self.ftpserver, self.local_file, self.local_file.split('/')[-1],callback=callback)
+        self.ftpuser.upload_file(self.ftpserver, self.local_file, self.local_file.split('/')[-1], callback=callback)
 
         self.trans_list()
 
         end_time = QTableWidgetItem(time.asctime())
-        self.trans.UploadList.setItem(row_count, 3, end_time)
+        self.ui.UploadList.setItem(row_count, 3, end_time)
         # 上传后刷新远程文件目录
         self.refresh_dir()
 
