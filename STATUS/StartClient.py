@@ -76,7 +76,7 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         self.loginWin = LoginWin()
 
         # transmission log
-        sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
         # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
 
     def saveConfig(self):
@@ -179,9 +179,9 @@ class Client:
         self.remote_dir = ''
         self.local_file = None
         self.local_dir = None
-        self.cur_upload_size = 0.0  # 已上传文件总量
+        self.cur_upload_count = 0  # 已上传文件block总量
         self.cur_download_size = 0.0  # 已下载文件总量
-        self.target_upload_size = 0.0  # 上传文件总量
+        self.target_upload_count = 0  # 上传文件block总量
         self.target_download_size = 0.0  # 下载文件总量
         self.pv_download = 0.0  # 下载进度
         self.pv_upload = 0.0  # 上传进度
@@ -281,44 +281,62 @@ class Client:
             self.ui.DownloadBar.setValue(0)
             self.ui.DfileName.setText('')
 
+    def upload_callback(self, buf):
+        # this function is called on each block of data after it is sent.
+        # By default, block size is 1024, namely 1KB, as configurated in user.py.
+        self.cur_upload_count += 1
+        self.pv_upload = int(100 * (self.cur_upload_count / self.target_upload_count))
+        self.ui.UploadBar.setValue(self.pv_upload)
+
     def upload(self):
+        if self.local_file:
+            thread = threading.Thread(target=lambda: self._upload(self.local_file))
+            thread.setDaemon(True)
+            thread.start()
+
+    def _upload(self, local_path):
         # NOTE: 已经transWin界面加入到主窗口，调用时由self.trans变为self.ui
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
-        callback = None  # 回调函数
+
+        assert os.path.exists(local_path)  # 本地文件路径
 
         # 在传输列表中插入一行
         row_count = self.ui.UploadList.rowCount()  # 当前行数
         self.ui.UploadList.insertRow(int(row_count))  # 当前行后插入
 
-        tmp = -1
-        while (self.local_file[tmp] != '/'):
-            tmp -= 1
+        file_name = os.path.split(local_path)[1]
 
-        # 插入文件名
-        file_name = QTableWidgetItem(self.local_file[tmp + 1:])
-        self.ui.UploadList.setItem(row_count, 0, file_name)
-        self.ui.UfileName.setText(self.local_file[tmp + 1:])
+        remote_dir = self.ftpserver.pwd()
+        remote_path = os.path.join(remote_dir, file_name)
+
+        file_name_qt = QTableWidgetItem(file_name)
+        self.ui.UploadList.setItem(row_count, 0, file_name_qt)
+        self.ui.UfileName.setText(file_name)
 
         # 插入开始时间
         start_time = QTableWidgetItem(time.asctime())
         self.ui.UploadList.setItem(row_count, 2, start_time)
         # 插入文件大小
-        file_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
-        file_size = QTableWidgetItem(file_size)
-        self.ui.UploadList.setItem(row_count, 1, file_size)
+        print(1)
+        target_size = self.ftpuser.get_size_format(os.path.getsize(local_path))
+        target_count = (os.path.getsize(local_path) + 1024) // 1024
+        self.target_upload_count += target_count
+        target_size = QTableWidgetItem(target_size)
+        print(2)
+        self.ui.UploadList.setItem(row_count, 1, target_size)
 
-        '''
-        1.下面一行代码会报错（闪退），注释后可正常运行其余部分
-        2.代码主要实现文件上传
-        3.该部分与图界面进度条交互未实现
-        '''
-        self.ftpuser.upload_file(self.ftpserver, self.local_file, self.local_file.split('/')[-1], callback=callback)
-
-        self.trans_list()
-
+        thread = threading.Thread(target=lambda: self.ftpuser.upload_file(self.ftpserver, local_path, remote_path,
+                                                                          callback=self.upload_callback))
+        thread.setDaemon(True)
+        thread.start()
+        thread.join()
         end_time = QTableWidgetItem(time.asctime())
+        print(3)
+        if self.cur_upload_count == self.target_upload_count:
+            self.ui.UploadBar.setValue(0)
+            self.ui.UfileName.setText('')
+
         self.ui.UploadList.setItem(row_count, 3, end_time)
-        # 上传后刷新远程文件目录
         self.refresh_dir()
 
     def file_name(self, Qmodelidx):
