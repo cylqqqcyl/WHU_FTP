@@ -175,6 +175,8 @@ class Client:
         self.ui.tableWidget.doubleClicked.connect(self.change_dir)  # 双击操作
         self.ui.tableWidget.cellClicked.connect(self.file_selected)  # 单击操作
 
+        self.ui.UploadList.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.ui.DownloadList.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.remote_file = None
         self.remote_dir = ''
         self.local_file = None
@@ -257,8 +259,10 @@ class Client:
                 # print(log) # debug use
                 self.cur_download_size += increment
                 old_size = cur_size
-
-                self.pv_download = int(100 * (self.cur_download_size / self.target_download_size))
+                try:
+                    self.pv_download = int(100 * (self.cur_download_size / self.target_download_size))
+                except ZeroDivisionError:
+                    self.pv_download = 100
                 self.ui.DownloadBar.setValue(self.pv_download)
                 if cur_size == target_size:
                     end_time = QTableWidgetItem(time.asctime())
@@ -285,7 +289,10 @@ class Client:
         # this function is called on each block of data after it is sent.
         # By default, block size is 1024, namely 1KB, as configurated in user.py.
         self.cur_upload_count += 1
-        self.pv_upload = int(100 * (self.cur_upload_count / self.target_upload_count))
+        try:
+            self.pv_upload = int(100 * (self.cur_upload_count / self.target_upload_count))
+        except ZeroDivisionError:
+            self.pv_upload = 100
         self.ui.UploadBar.setValue(self.pv_upload)
 
     def upload(self):
