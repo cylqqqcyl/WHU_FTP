@@ -9,7 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-import resources
+import STATUS.resources
 
 class Ui_loginForm(object):
     def setupUi(self, loginForm):
@@ -87,6 +87,29 @@ class Ui_loginForm(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSpacing(20)
         self.horizontalLayout.setObjectName("horizontalLayout")
+
+
+
+
+
+
+        self.NewBtn = QtWidgets.QPushButton(self.frame)
+        font = QtGui.QFont()
+        font.setFamily("微软雅黑")
+        font.setPointSize(10)
+        self.NewBtn.setFont(font)
+        self.NewBtn.setObjectName("connectBtn")
+        self.horizontalLayout.addWidget(self.NewBtn)
+
+        self.delBtn = QtWidgets.QPushButton(self.frame)
+        font = QtGui.QFont()
+        font.setFamily("微软雅黑")
+        font.setPointSize(10)
+        self.delBtn.setFont(font)
+        self.delBtn.setObjectName("connectBtn")
+        self.horizontalLayout.addWidget(self.delBtn)
+
+
         self.connectBtn = QtWidgets.QPushButton(self.frame)
         font = QtGui.QFont()
         font.setFamily("微软雅黑")
@@ -94,6 +117,8 @@ class Ui_loginForm(object):
         self.connectBtn.setFont(font)
         self.connectBtn.setObjectName("connectBtn")
         self.horizontalLayout.addWidget(self.connectBtn)
+
+
         self.closeBtn = QtWidgets.QPushButton(self.frame)
         font = QtGui.QFont()
         font.setFamily("微软雅黑")
@@ -101,6 +126,8 @@ class Ui_loginForm(object):
         self.closeBtn.setFont(font)
         self.closeBtn.setObjectName("closeBtn")
         self.horizontalLayout.addWidget(self.closeBtn)
+
+
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.gridLayout_3.addWidget(self.frame, 0, 0, 1, 1)
         self.gridLayout.addWidget(self.frame_2, 0, 0, 1, 1)
@@ -124,6 +151,8 @@ class Ui_loginForm(object):
         item.setText(_translate("loginForm", "主机"))
         item = self.sessionTbl.horizontalHeaderItem(5)
         item.setText(_translate("loginForm", "口令"))
+        self.NewBtn.setText(_translate("loginForm","新建"))
+        self.delBtn.setText(_translate("loginForm","删除"))
         self.connectBtn.setText(_translate("loginForm", "连接"))
         self.closeBtn.setText(_translate("loginForm", "关闭"))
 
