@@ -98,8 +98,8 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         self.loginWin = LoginWin()
 
         # transmission log
-        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
-        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+        sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
 
 
     def saveConfig(self):
@@ -122,11 +122,11 @@ class ClientUI(QMainWindow, Ui_MainWindow):
                 f.write(data)
 
     def outputWriteInfo(self, text):
-        self.logBrowser.append(text)
+        self.textBrowser.append(text)
 
     def outputWriteError(self, text):
         # 错误信息用红色输出
-        self.logBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
+        self.textBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
 
     def closeEvent(self, e):
         reply = QMessageBox.question(self,

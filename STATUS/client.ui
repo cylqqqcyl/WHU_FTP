@@ -536,7 +536,7 @@ background-color: rgba(128, 128, 128, 150);</string>
              <string notr="true">background-color: rgba(255, 255, 255, 159);</string>
             </property>
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
             <property name="documentMode">
              <bool>true</bool>
@@ -896,6 +896,12 @@ background-color: rgba(128, 128, 128, 150);</string>
               </property>
               <item row="0" column="0">
                <widget class="QTextBrowser" name="textBrowser">
+                <property name="font">
+                 <font>
+                  <family>微软雅黑</family>
+                  <pointsize>10</pointsize>
+                 </font>
+                </property>
                 <property name="styleSheet">
                  <string notr="true">background-color: rgba(255, 255, 255, 100);</string>
                 </property>
