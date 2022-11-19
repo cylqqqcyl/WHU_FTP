@@ -9,7 +9,7 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-
+import resources
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -451,6 +451,10 @@ class Ui_MainWindow(object):
         self.gridLayout_3.setContentsMargins(10, 10, 10, 10)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.textBrowser = QtWidgets.QTextBrowser(self.tabLog)
+        font = QtGui.QFont()
+        font.setFamily("微软雅黑")
+        font.setPointSize(10)
+        self.textBrowser.setFont(font)
         self.textBrowser.setStyleSheet("background-color: rgba(255, 255, 255, 100);")
         self.textBrowser.setObjectName("textBrowser")
         self.gridLayout_3.addWidget(self.textBrowser, 0, 0, 1, 1)
@@ -461,7 +465,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         self.tabWidget_2.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
