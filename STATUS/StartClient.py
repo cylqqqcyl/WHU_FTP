@@ -1,3 +1,8 @@
+
+
+import math
+import threading
+
 import json
 import os
 import sys
@@ -17,11 +22,22 @@ from src.ClientServer import WHUFTPClient
 from client import Ui_MainWindow
 from login import Ui_loginForm
 from Transmission import Ui_Form
+
 from NewLogin import NewLogin_Form
+
+import queue
+
 
 dirname = os.path.dirname(PyQt5.__file__)
 plugin_path = os.path.join(dirname, 'plugins', 'platforms')
 os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
+
+
+class EmitStr(QObject):  # 日志输出类
+    textWrite = pyqtSignal(str)  # 定义一个发送str的信号
+
+    def write(self, text):
+        self.textWrite.emit(str(text))
 
 
 # NOTE: 无法在子线程中弹窗。故弹窗动作要放在主线程，子线程只负责告诉主线程是否弹窗。
@@ -34,38 +50,13 @@ class MsgThread(QThread):
     def run(self):
         self.msgSigal.emit()  # 发送信号至主线程
 
-class TransWin(QDialog, Ui_Form):
-    def __init__(self, parent=None):
-        super(TransWin, self).__init__(parent)
 
-        self.setupUi(self)
+class ProgressSignal(QObject):  # 传输进度信号类
+    progressSignal = pyqtSignal(int)
 
-        self.CloseBtn.clicked.connect(self.close)
+    def update_progress(self, progress):
+        self.progressSignal.emit(progress)
 
-        # 设置一个值表示进度条的当前进度
-        self.pv = 0
-        # 声明一个时钟控件
-        #self.timer1 = QBasicTimer()
-
-        '''设置下载页面进度条参数'''
-        self.DownloadBar.setStyleSheet(
-            "QProgressBar { border: 2px solid grey; border-radius: 5px; color: rgb(20,20,20);"
-            "  background-color: #FFFFFF; text-align: center;}QProgressBar::chunk {background-color: rgb(100,200,200); "
-            "border-radius: 10px; margin: 0.1px;  width: 1px;}")
-        self.DownloadBar.setMinimum(0)      # 设置进度条的范围
-        self.DownloadBar.setMaximum(100)
-        self.DownloadBar.setValue(self.pv)  #设置当前值
-        self.DownloadBar.setFormat('Loaded  %p%'.format(self.DownloadBar.value() - self.DownloadBar.minimum()))   # 设置进度条文字格式
-
-        '''设置上传页面进度条参数'''
-        self.UploadBar.setStyleSheet(
-            "QProgressBar { border: 2px solid grey; border-radius: 5px; color: rgb(20,20,20);"
-            "  background-color: #FFFFFF; text-align: center;}QProgressBar::chunk {background-color: rgb(100,200,200); "
-            "border-radius: 10px; margin: 0.1px;  width: 1px;}")
-        self.UploadBar.setMinimum(0)
-        self.UploadBar.setMaximum(100)
-        self.UploadBar.setValue(self.pv)
-        self.UploadBar.setFormat('Loaded  %p%'.format(self.UploadBar.value() - self.UploadBar.minimum()))
 
 class LoginWin(QDialog, Ui_loginForm):
     def __init__(self, parent=None):
@@ -130,6 +121,12 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         self.loginWin = LoginWin()
 
 
+
+        # transmission log
+        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+
+
     def saveConfig(self):
         name = 'whuftp'
         username = self.nameEdit.text()
@@ -148,6 +145,13 @@ class ClientUI(QMainWindow, Ui_MainWindow):
             data = json.dumps(config)
             with open('cache/config_client.json', 'w') as f:
                 f.write(data)
+
+    def outputWriteInfo(self, text):
+        self.logBrowser.append(text)
+
+    def outputWriteError(self, text):
+        # 错误信息用红色输出
+        self.logBrowser.append(f'<font color=\'#FF0000\'>{text}</font>')
 
     def closeEvent(self, e):
         reply = QMessageBox.question(self,
@@ -178,7 +182,11 @@ class Client:
         self.loginWin = LoginWin()
         self.ui = ClientUI()
 
+
         self.trans = TransWin() # 传输窗口
+
+        # self.trans = TransWin()  # 传输窗口
+
         # self.ui.button.clicked.connect(self.handleCalc)
 
         # signal slots
@@ -219,16 +227,33 @@ class Client:
         self.ui.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.ui.tableWidget.verticalHeader().setVisible(False)
         self.ui.tableWidget.doubleClicked.connect(self.change_dir)  # 双击操作
-        self.ui.tableWidget.cellClicked.connect(self.file_selected)    # 单击操作
+        self.ui.tableWidget.cellClicked.connect(self.file_selected)  # 单击操作
 
+        self.ui.UploadList.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.ui.DownloadList.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.remote_file = None
         self.remote_dir = ''
         self.local_file = None
         self.local_dir = None
+        self.cur_upload_count = 0  # 已上传文件block总量
+        self.cur_download_size = 0.0  # 已下载文件总量
+        self.target_upload_count = 0  # 上传文件block总量
+        self.target_download_size = 0.0  # 下载文件总量
+        self.pv_download = 0.0  # 下载进度
+        self.pv_upload = 0.0  # 上传进度
 
         self.exception = ''
         self.msgthread = MsgThread()
         self.msgthread.msgSigal.connect(lambda: self.show_msg(self.exception))
+
+        self.download_progressChanged = ProgressSignal(progressSignal=self.ui.DownloadBar.setValue)
+        self.upload_progressChanged = ProgressSignal(progressSignal=self.ui.UploadBar.setValue)
+
+        self.download_queue = queue.Queue()
+        self.upload_queue = queue.Queue()
+
+        self.download_thread = None
+        self.upload_thread = None
 
     def show_msg(self, msg):
         QMessageBox.warning(self.ui, 'Warning', msg)
@@ -246,91 +271,148 @@ class Client:
         except Exception as e:
             print(e)
 
-
-
     def download(self):
+        if self.local_dir:
+            file_name = self.ui.tableWidget.selectedItems()[0].text()
+            row_count = self.ui.DownloadList.rowCount()  # 当前行数
+            self.ui.DownloadList.insertRow((int(row_count)))  # 当前行后插入
+
+            self.download_queue.put((self.local_dir, file_name, row_count))
+            # 插入文件名
+            file_name_qt = QTableWidgetItem(file_name)
+            self.ui.DownloadList.setItem(row_count, 0, file_name_qt)
+            self.ui.DfileName.setText(file_name)
+            # 插入开始时间
+            start_time = QTableWidgetItem(time.asctime())
+            self.ui.DownloadList.setItem(row_count, 2, start_time)
+            # 插入文件大小
+            file_size = self.ftpuser.get_size_format(self.ftpserver.size(file_name))
+            file_size = QTableWidgetItem(file_size)
+            self.ui.DownloadList.setItem(row_count, 1, file_size)
+
+            if self.download_thread is None or not self.download_thread.is_alive():
+                self.download_thread = threading.Thread(target=lambda: self._download())
+                self.download_thread.setDaemon(True)
+                self.download_thread.start()
+            else:
+                pass
+        else:
+            QMessageBox.warning(self.ui, 'warning', '请先选择保存位置！')
+            pass
+
+    def _download(self):
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
-        # remote_dir = self.ftpserver.pwd()[1:]  # 获取当前远程目录
-        file_name = self.ui.tableWidget.selectedItems()[0].text()  # 当前选中的文件名 (可以考虑多选中多下载)
-        remote_file = file_name  # 当前选中的文件远程路径
+        while not self.download_queue.empty():
+            local_dir, file_name, row_count = self.download_queue.get()
+            assert local_dir is not None
+            assert file_name is not None
+            remote_path = file_name
+            local_path = os.path.join(local_dir, file_name)
 
-        row_count = self.trans.DownloadList.rowCount()  # 当前行数
-        self.trans.DownloadList.insertRow(int(row_count))  # 当前行后插入
+            target_size = self.ftpserver.size(remote_path)  # bytes
+            old_size = 0.0
+            cur_size = 0.0
 
-        #插入文件名
-        file_name_qt = QTableWidgetItem(file_name)
-        self.trans.DownloadList.setItem(row_count, 0, file_name_qt)
-        self.trans.DfileName.setText(file_name)
-        #插入开始时间
-        start_time = QTableWidgetItem(time.asctime())
-        self.trans.DownloadList.setItem(row_count, 2, start_time)
-        #插入文件大小
-        file_size = self.ftpuser.get_size_format(self.ftpserver.size(remote_file))
-        file_size = QTableWidgetItem(file_size)
-        self.trans.DownloadList.setItem(row_count, 1, file_size)
+            self.target_download_size += target_size
+            thread = threading.Thread(
+                target=lambda: self.ftpuser.download_file(self.ftpserver, remote_path, local_path))
+            thread.setDaemon(True)
+            thread.start()
 
-        '''这里是文件下载的函数调用
-            进度条思路：
-            获取获取当前已传输的文件大小a，
-            已知文件总大小为b，
-            进行如下赋值：self.trans.pv=100*a/b #pv为进度条对应的完成度
-                        self.trans.UploadBar.setValue(self.trans.pv) #将上述值赋予进度条即可显示
-            '''
-        self.ftpuser.download_file(self.ftpserver, remote_file, os.path.join(self.local_dir, file_name))
+            # 下载中
+            while thread.is_alive():
+                if os.path.exists(local_path):
+                    cur_size = os.path.getsize(local_path)
+                    increment = cur_size - old_size
+                    #  log = f'cur: {cur_size}, old: {old_size}, incre: {increment}'
+                    # print(log) # debug use
+                    self.cur_download_size += increment
+                    old_size = cur_size
+                    try:
+                        pv_download = int(100 * (self.cur_download_size / self.target_download_size))
+                    except ZeroDivisionError:
+                        pv_download = 100
+                    self.download_progressChanged.update_progress(pv_download)  # 由于是进程之间，所以需要信号槽
+                    if cur_size == target_size:
+                        end_time = QTableWidgetItem(time.asctime())
 
-        if(os.path.getsize(os.path.join(self.local_dir, file_name)) == self.ftpserver.size(remote_file)):
-            self.trans.DownloadBar.setValue(self.trans.pv)
+            print(f'{file_name}已下载完成！')
 
-        #插入结束时间
-        end_time = QTableWidgetItem(time.asctime())
-        for i in range(101):
-            time.sleep((0.00001))
-            self.trans.DownloadBar.setValue(i)
+            # 下载完成，该任务的target_size = 0
+            self.target_download_size = 0
+            self.cur_download_size = 0
 
+            # 插入结束时间
+            self.ui.DownloadList.setItem(row_count, 3, end_time)
 
-        self.trans.DownloadList.setItem(row_count, 3, end_time)
-
-        self.trans_list()
+    def upload_callback(self, buf):
+        # this function is called on each block of data after it is sent.
+        # By default, block size is 1024, namely 1KB, as configurated in user.py.
+        self.cur_upload_count += 1
+        try:
+            pv_upload = int(math.ceil(100 * (self.cur_upload_count / self.target_upload_count)))
+        except ZeroDivisionError:
+            pv_upload = 100
+        self.upload_progressChanged.update_progress(pv_upload)
 
     def upload(self):
+        if self.local_file:
+            # 在传输列表中插入一行
+            row_count = self.ui.UploadList.rowCount()  # 当前行数
+            self.ui.UploadList.insertRow(int(row_count))  # 当前行后插入
+
+            file_name = os.path.split(self.local_file)[1]
+
+            self.upload_queue.put((self.local_file, file_name, row_count))
+
+            file_name_qt = QTableWidgetItem(file_name)
+            self.ui.UploadList.setItem(row_count, 0, file_name_qt)
+            self.ui.UfileName.setText(file_name)
+
+            # 插入开始时间
+            start_time = QTableWidgetItem(time.asctime())
+            self.ui.UploadList.setItem(row_count, 2, start_time)
+
+            target_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
+            target_size = QTableWidgetItem(target_size)
+            self.ui.UploadList.setItem(row_count, 1, target_size)
+
+            if self.upload_thread is None or not self.upload_thread.is_alive():
+                self.upload_thread = threading.Thread(target=lambda: self._upload())
+                self.upload_thread.setDaemon(True)
+                self.upload_thread.start()
+            else:
+                pass
+        else:
+            QMessageBox.warning(self.ui, 'warning', '请先选择上传的文件！')
+            pass
+
+    def _upload(self):
+        # NOTE: 已经transWin界面加入到主窗口，调用时由self.trans变为self.ui
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
-        callback = None  # 回调函数
+        while not self.upload_queue.empty():
+            local_path, file_name, row_count = self.upload_queue.get()
+            assert os.path.exists(local_path)  # 本地文件路径
 
+            remote_path = file_name
 
-        # 在传输列表中插入一行
-        row_count = self.trans.UploadList.rowCount()  # 当前行数
-        self.trans.UploadList.insertRow(int(row_count))  # 当前行后插入
+            # 文件大小
+            target_count = max((os.path.getsize(local_path)) // 1024, 1)  # 传输块数（最少是1）
+            self.target_upload_count += target_count
 
-        tmp = -1
-        while (self.local_file[tmp] != '/'):
-            tmp -= 1
+            thread = threading.Thread(target=lambda: self.ftpuser.upload_file(self.ftpserver, local_path, remote_path,
+                                                                              callback=self.upload_callback))
+            thread.setDaemon(True)
+            thread.start()
+            thread.join()
+            end_time = QTableWidgetItem(time.asctime())
+            print(3)
 
-        # 插入文件名
-        file_name = QTableWidgetItem(self.local_file[tmp + 1:])
-        self.trans.UploadList.setItem(row_count, 0, file_name)
-        self.trans.UfileName.setText(self.local_file[tmp + 1:])
-
-        # 插入开始时间
-        start_time = QTableWidgetItem(time.asctime())
-        self.trans.UploadList.setItem(row_count, 2, start_time)
-        # 插入文件大小
-        file_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
-        file_size = QTableWidgetItem(file_size)
-        self.trans.UploadList.setItem(row_count, 1, file_size)
-
-        '''
-        1.下面一行代码会报错（闪退），注释后可正常运行其余部分
-        2.代码主要实现文件上传
-        3.该部分与图界面进度条交互未实现
-        '''
-        self.ftpuser.upload_file(self.ftpserver, self.local_file, self.local_file.split('/')[-1],callback=callback)
-
-        self.trans_list()
-
-        end_time = QTableWidgetItem(time.asctime())
-        self.trans.UploadList.setItem(row_count, 3, end_time)
-        # 上传后刷新远程文件目录
-        self.refresh_dir()
+            self.ui.UploadList.setItem(row_count, 3, end_time)
+            self.refresh_dir()
+            # 上传完成，任务的upload_count清零
+            self.target_upload_count = 0
+            self.cur_upload_count = 0
 
     def file_name(self, Qmodelidx):
         tm_path = self.modelt.filePath(Qmodelidx)
@@ -432,8 +514,6 @@ class Client:
 
         self.ui.connectBtn.setDisabled(False)
 
-
-
     def change_dir(self):
         row = self.ui.tableWidget.currentRow()
         target_type = self.ui.tableWidget.item(row, 2).text()
@@ -504,15 +584,16 @@ class Client:
     def file_selected(self):
         row = self.ui.tableWidget.currentRow()
         target_type = self.ui.tableWidget.item(row, 2).text()
-        if target_type != 'file' or self.local_file is not None: # 选择的不是文件或者没有选中本地目录
+        if target_type != 'file' or self.local_file is not None:  # 选择的不是文件或者没有选中本地目录
             self.ui.dButton.setEnabled(False)  # 下载按键禁止
         else:
             self.ui.dButton.setEnabled(True)  # 下载按键允许
         return
 
     def trans_list(self):
-        self.trans.setWindowTitle('Transmission List')
-        self.trans.show()
+        self.ui.setWindowTitle('Transmission List')
+        self.ui.show()
+
 
     def NewSessionList(self):
         self.NewSession.exec_()
