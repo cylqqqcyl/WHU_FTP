@@ -1,19 +1,33 @@
+
+
 import math
 import threading
+
 import json
-from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-import PyQt5
 import os
 import sys
+import threading
+
+import PyQt5
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+import PyQt5.QtGui
+from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QMessageBox
+
 import time
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.ClientServer import WHUFTPClient
 from client import Ui_MainWindow
 from login import Ui_loginForm
 from Transmission import Ui_Form
+
+from NewLogin import NewLogin_Form
+
 import queue
+
 
 dirname = os.path.dirname(PyQt5.__file__)
 plugin_path = os.path.join(dirname, 'plugins', 'platforms')
@@ -50,20 +64,29 @@ class LoginWin(QDialog, Ui_loginForm):
         super(LoginWin, self).__init__(parent)
 
         self.setupUi(self)
-
         self.closeBtn.clicked.connect(self.close)
+        self.delBtn.setEnabled(False)
 
         # 获取上次的config
         with open('cache/config_client.json', "r") as f:
             data = f.read()
-        config = json.loads(data)
-        self.config = config
+            if len(data) == 0:
+                config = [] #用列表存储多个连接信息
+            else:
+                config = json.loads(data)
+            for line in config:
+                currentRowCount = self.sessionTbl.rowCount()
+                self.sessionTbl.insertRow(currentRowCount)
+                self.sessionTbl.setItem(currentRowCount, 0, QTableWidgetItem(line['name']))
 
-        self.sessionTbl.insertRow(0)
-        for col, text in enumerate(config.values()):
-            self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
+                self.sessionTbl.setItem(currentRowCount, 1, QTableWidgetItem(line['username']))
+                self.sessionTbl.setItem(currentRowCount, 2, QTableWidgetItem("FTP"))
+                self.sessionTbl.setItem(currentRowCount, 3, QTableWidgetItem(line['port']))
+                self.sessionTbl.setItem(currentRowCount, 4, QTableWidgetItem(line['domain']))
+                self.sessionTbl.setItem(currentRowCount, 5, QTableWidgetItem(line['password']))
+                self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
 
-        self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
+        self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)#设置登录界面信息只读
 
     def get_selected_row(self):
         row = self.sessionTbl.currentIndex().row()
@@ -75,6 +98,20 @@ class LoginWin(QDialog, Ui_loginForm):
         return user, port, host, password
 
 
+
+
+
+class NewLogin(QDialog,NewLogin_Form):
+    def __init__(self, parent=None):
+        super(NewLogin, self).__init__(parent)
+
+        self.setupUi(self)
+
+        self.Cancel.clicked.connect(self.close)
+
+
+
+
 class ClientUI(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(ClientUI, self).__init__(parent)
@@ -83,9 +120,12 @@ class ClientUI(QMainWindow, Ui_MainWindow):
 
         self.loginWin = LoginWin()
 
+
+
         # transmission log
         # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
         # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+
 
     def saveConfig(self):
         name = 'whuftp'
@@ -137,10 +177,16 @@ class Client:
 
         self.ftpserver = None  # 所连接到的服务器实例
         self.current_remote_dir = None  # 当前服务器目录
-
+        self.NewSession = NewLogin()
+        self.NewSession.setWindowTitle('New Session')
         self.loginWin = LoginWin()
         self.ui = ClientUI()
+
+
+
+
         # self.trans = TransWin()  # 传输窗口
+
         # self.ui.button.clicked.connect(self.handleCalc)
 
         # signal slots
@@ -153,10 +199,13 @@ class Client:
         self.ui.disconnectBtn.setEnabled(False)  # 断开连接
         self.ui.disconnectBtn.clicked.connect(self.disconnect_server)
         self.loginWin.connectBtn.clicked.connect(self.connect_shortcut)
-
         self.client_root = 'home'
         self.modelt = QFileSystemModel()
         self.modelt.setRootPath(self.client_root)
+        self.loginWin.NewBtn.clicked.connect(self.NewSessionList)
+        self.loginWin.sessionTbl.cellClicked.connect(self.deleteOpetion)  # 单击文件打开
+
+        self.NewSession.Confirm.clicked.connect(self.AddData)
 
         # 左侧本地文件树设置
         self.ui.treeView.setModel(self.modelt)
@@ -547,6 +596,60 @@ class Client:
     def trans_list(self):
         self.ui.setWindowTitle('Transmission List')
         self.ui.show()
+
+
+    def NewSessionList(self):
+        self.NewSession.exec_()
+
+
+    def AddData(self):
+        name = self.NewSession.Name.text()
+
+        username = self.NewSession.User.text()
+        password = self.NewSession.Host.text()
+        host = self.NewSession.Host_2.text()
+
+        port = self.NewSession.Port.text()
+
+        if len(name) == 0 or len(username) == 0 or len(password) ==0 or len(host) ==0 or len(port) == 0:
+            QMessageBox.warning(self.ui, 'warning', '请补全连接！')
+
+        else:
+            ip = host.split('.')
+            if len(ip) == 4 and ip[0].isdigit() and int(ip[0]) in range(0,255) and ip[1].isdigit() and int(ip[1]) in range(0,255) and ip[2].isdigit() and int(ip[2]) in range(0,255) and ip[3].isdigit() and int(ip[3]) in range(0,255):
+                dict = {"name": "whuftp", "username": username, "protocol": "FTP", "port": port, "domain": host, "password": password}
+                with open('cache/config_client.json', mode='r', encoding='utf-8') as f:
+                    data = f.read()
+                list= []
+                if not len(data)==0:
+                    list = json.loads(data)
+                list.append(dict)
+                print(list)
+                with open('cache/config_client.json', mode='w', encoding='utf-8') as f:
+                    json.dump(list, f)
+                currentRowCount = self.loginWin.sessionTbl.rowCount()
+                self.loginWin.sessionTbl.insertRow(currentRowCount)
+                self.loginWin.sessionTbl.setItem(currentRowCount, 0, QTableWidgetItem(name))
+                self.loginWin.sessionTbl.setItem(currentRowCount, 1, QTableWidgetItem(username))
+                self.loginWin.sessionTbl.setItem(currentRowCount, 2, QTableWidgetItem("FTP"))
+                self.loginWin.sessionTbl.setItem(currentRowCount, 3, QTableWidgetItem(port))
+                self.loginWin.sessionTbl.setItem(currentRowCount, 4, QTableWidgetItem(host))
+                self.loginWin.sessionTbl.setItem(currentRowCount, 5, QTableWidgetItem(password))
+                self.NewSession.close()
+            else:
+                QMessageBox.warning(self.ui, 'warning', '主机格式不正确！')
+
+
+
+    def deleteOpetion(self):
+        row = self.loginWin.sessionTbl.currentItem()
+        if not row == None:
+            self.loginWin.delBtn.setEnabled(True)
+        else:
+            self.loginWin.delBtn.setEnabled(False)
+        # self.loginWin.delBtn.clicked.connect()
+        # if self.loginWin.delBtn.clicked():
+        #     self.loginWin.delBtn.setEnabled(False)
 
 
 app = QApplication([])
