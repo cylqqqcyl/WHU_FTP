@@ -480,12 +480,18 @@ class Client:
             pass
 
     def connect_shortcut(self):
-        user, port, host, password = self.loginWin.get_selected_row()
-        self.ui.nameEdit.setText(user)
-        self.ui.portEdit.setText(port)
-        self.ui.domainEdit.setText(host)
-        self.ui.pwEdit.setText(password)
-        self.loginWin.close()
+        rowcount = self.loginWin.sessionTbl.rowCount()
+        if rowcount == 0:
+            QMessageBox.warning(self.ui, 'warning', '请建立连接！')
+        else:
+            user, port, host, password = self.loginWin.get_selected_row()
+
+            self.ui.nameEdit.setText(user)
+            self.ui.portEdit.setText(port)
+            self.ui.domainEdit.setText(host)
+            self.ui.pwEdit.setText(password)
+            self.loginWin.close()
+
 
     def connect_server(self):
 
