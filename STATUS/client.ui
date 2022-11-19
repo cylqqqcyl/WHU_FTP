@@ -602,6 +602,9 @@ background-color: rgba(128, 128, 128, 150);</string>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
                         </property>
+                        <property name="readOnly">
+                         <bool>true</bool>
+                        </property>
                        </widget>
                       </item>
                      </layout>
@@ -656,6 +659,11 @@ background-color: rgba(128, 128, 128, 150);</string>
                       <attribute name="horizontalHeaderStretchLastSection">
                        <bool>true</bool>
                       </attribute>
+                      <column>
+                       <property name="text">
+                        <string>任务编号</string>
+                       </property>
+                      </column>
                       <column>
                        <property name="text">
                         <string>文件名</string>
@@ -746,6 +754,9 @@ background-color: rgba(128, 128, 128, 150);</string>
                         <property name="styleSheet">
                          <string notr="true">background-color: rgba(255, 255, 255, 0);</string>
                         </property>
+                        <property name="readOnly">
+                         <bool>true</bool>
+                        </property>
                        </widget>
                       </item>
                      </layout>
@@ -800,6 +811,11 @@ background-color: rgba(128, 128, 128, 150);</string>
                       <attribute name="horizontalHeaderStretchLastSection">
                        <bool>true</bool>
                       </attribute>
+                      <column>
+                       <property name="text">
+                        <string>任务编号</string>
+                       </property>
+                      </column>
                       <column>
                        <property name="text">
                         <string>文件名</string>

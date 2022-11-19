@@ -739,11 +739,6 @@ class Client:
         self.download_resume()
 
 
-    def trans_list(self):
-        self.ui.setWindowTitle('Transmission List')
-        self.ui.show()
-
-
     def NewSessionList(self):
         self.NewSession.exec_()
 

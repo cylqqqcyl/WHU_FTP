@@ -3,7 +3,7 @@ import sys
 from socket import _GLOBAL_DEFAULT_TIMEOUT
 
 CRLF = '\r\n'
-
+B_CRLF = b'\r\n'
 
 class Error(Exception): pass
 class error_reply(Exception): pass
@@ -105,26 +105,44 @@ class FTP_user:
             print('*put*', line)
         self.sock.sendall(line.encode(self.encoding))
 
-    def getresp(self):
+    def getline(self):
         line = self.file.readline(self.maxline + 1)
         if len(line) > self.maxline:
             raise Error("got more than %d bytes" % self.maxline)
-        # if self.debugging > 1:
-        #     print('*get*', self.sanitize(line))
+        if self.debugging > 1:
+            print('*get*', line)
         if not line:
             raise EOFError
         if line[-2:] == CRLF:
             line = line[:-2]
         elif line[-1:] in CRLF:
             line = line[:-1]
-        c = line[:1]
+        return line
+
+    def getmultiline(self):
+        line = self.getline()
+        if line[3:4] == '-':
+            code = line[:3]
+            while 1:
+                nextline = self.getline()
+                line = line + ('\n' + nextline)
+                if nextline[:3] == code and \
+                        nextline[3:4] != '-':
+                    break
+        return line
+    def getresp(self):
+        resp = self.getmultiline()
+        if self.debugging:
+            print('*resp*', resp)
+        self.lastresp = resp[:3]
+        c = resp[:1]
         if c in {'1', '2', '3'}:
-            return line
+            return resp
         if c == '4':
-            raise error_temp(line)
+            raise error_temp(resp)
         if c == '5':
-            raise error_perm(line)
-        raise error_proto(line)
+            raise error_perm(resp)
+        raise error_proto(resp)
 
     def voidresp(self):
         """需要一个以 '2'开头的答复."""
@@ -311,12 +329,20 @@ class FTP_user:
             return ''
         return parse257(resp)
 
+    def abort(self):
+        # overridden as we can't pass MSG_OOB flag to sendall()
+        line = b'ABOR' + B_CRLF
+        self.sock.sendall(line)
+        resp = self.getmultiline()
+        if resp[:3] not in {'426', '225', '226'}:
+            raise error_proto(resp)
+        return resp
+
     def quit(self):
         '''退出并关闭连接.'''
         resp = self.voidcmd('QUIT')
         self.close()
         return resp
-
 
     def close(self):
         '''无条件关闭连接.'''
