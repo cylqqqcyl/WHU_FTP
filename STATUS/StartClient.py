@@ -204,7 +204,7 @@ class Client:
         self.modelt.setRootPath(self.client_root)
         self.loginWin.NewBtn.clicked.connect(self.NewSessionList)
         self.loginWin.sessionTbl.cellClicked.connect(self.deleteOpetion)  # 单击文件打开
-
+        self.loginWin.delBtn.clicked.connect(self.deleteRow)
         self.NewSession.Confirm.clicked.connect(self.AddData)
 
         # 左侧本地文件树设置
@@ -626,30 +626,41 @@ class Client:
                 list.append(dict)
                 print(list)
                 with open('cache/config_client.json', mode='w', encoding='utf-8') as f:
-                    json.dump(list, f)
+                    json.dump(list, f)      #将数据保存到json里
                 currentRowCount = self.loginWin.sessionTbl.rowCount()
-                self.loginWin.sessionTbl.insertRow(currentRowCount)
+                self.loginWin.sessionTbl.insertRow(currentRowCount) #将页面的数据插入到login中
                 self.loginWin.sessionTbl.setItem(currentRowCount, 0, QTableWidgetItem(name))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 1, QTableWidgetItem(username))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 2, QTableWidgetItem("FTP"))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 3, QTableWidgetItem(port))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 4, QTableWidgetItem(host))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 5, QTableWidgetItem(password))
+                self.NewSession.Name.clear() #清空之前的输入
+                self.NewSession.User.clear()
+                self.NewSession.Port.clear()
+                self.NewSession.Host.clear()
+                self.NewSession.Host_2.clear()
                 self.NewSession.close()
             else:
                 QMessageBox.warning(self.ui, 'warning', '主机格式不正确！')
 
 
-
     def deleteOpetion(self):
-        row = self.loginWin.sessionTbl.currentItem()
-        if not row == None:
-            self.loginWin.delBtn.setEnabled(True)
-        else:
-            self.loginWin.delBtn.setEnabled(False)
-        # self.loginWin.delBtn.clicked.connect()
-        # if self.loginWin.delBtn.clicked():
-        #     self.loginWin.delBtn.setEnabled(False)
+        self.loginWin.delBtn.setEnabled(True)
+
+
+    def deleteRow(self):
+        row = self.loginWin.sessionTbl.currentRow()
+        self.loginWin.sessionTbl.removeRow(row)
+        self.loginWin.delBtn.setEnabled(False)
+        with open('cache/config_client.json', mode='r', encoding='utf-8') as f:
+            data = f.read()
+        list = []
+        if not len(data) == 0:
+            list = json.loads(data)
+            del list[row]
+        with open('cache/config_client.json', mode='w', encoding='utf-8') as f:
+            json.dump(list, f)
 
 
 app = QApplication([])
