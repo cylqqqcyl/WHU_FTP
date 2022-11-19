@@ -177,7 +177,7 @@ class Client:
         self.icon_file.addPixmap(QPixmap(icon_file_path))
         self.icon_ukn.addPixmap(QPixmap(icon_ukn_path))
         self.server_root = '/'
-        # 左侧远程文件table设置
+        # 右侧远程文件table设置
         self.ui.tableWidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.ui.tableWidget.verticalHeader().setVisible(False)
         self.ui.tableWidget.doubleClicked.connect(self.change_dir)  # 双击操作
@@ -186,15 +186,31 @@ class Client:
         self.ui.UploadList.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.ui.DownloadList.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.remote_file = None
-        self.remote_dir = ''
+        self.remote_dir = None
         self.local_file = None
         self.local_dir = None
         self.cur_upload_count = 0  # 已上传文件block总量
         self.cur_download_size = 0.0  # 已下载文件总量
         self.target_upload_count = 0  # 上传文件block总量
         self.target_download_size = 0.0  # 下载文件总量
-        self.pv_download = 0.0  # 下载进度
-        self.pv_upload = 0.0  # 上传进度
+
+        # 初始状态下禁用上传下载列表的所有按钮
+        self.ui.DeleteUploadBtn.setEnabled(False)
+        self.ui.PauseUploadBtn.setEnabled(False)
+        self.ui.ContinueUploadBtn.setEnabled(False)
+        self.ui.PauseDownloadBtn.setEnabled(False)
+        self.ui.DeleteDownloadBtn.setEnabled(False)
+        self.ui.ContinueDownloadBtn.setEnabled(False)
+
+        self.ui.UploadList.cellClicked.connect(self.upload_selected)
+        self.ui.DownloadList.cellClicked.connect(self.download_selected)
+
+        self.ui.DeleteUploadBtn.clicked.connect(self.delete_upload)
+        self.ui.DeleteDownloadBtn.clicked.connect(self.delete_download)
+        self.ui.PauseUploadBtn.clicked.connect(self.pause_upload)
+        self.ui.PauseDownloadBtn.clicked.connect(self.pause_download)
+        self.ui.ContinueUploadBtn.clicked.connect(self.continue_upload)
+        self.ui.ContinueDownloadBtn.clicked.connect(self.continue_download)
 
         self.exception = ''
         self.msgthread = MsgThread()
@@ -204,10 +220,14 @@ class Client:
         self.upload_progressChanged = ProgressSignal(progressSignal=self.ui.UploadBar.setValue)
 
         self.download_queue = queue.Queue()
+        self.download_no = 0  # 下载队列中的任务数
         self.upload_queue = queue.Queue()
+        self.upload_no = 0  # 上传队列中的任务数
 
         self.download_thread = None
+        self.download_closing_event = threading.Event()
         self.upload_thread = None
+        self.upload_closing_event = threading.Event()
 
     def show_msg(self, msg):
         QMessageBox.warning(self.ui, 'Warning', msg)
@@ -232,17 +252,24 @@ class Client:
             self.ui.DownloadList.insertRow((int(row_count)))  # 当前行后插入
 
             self.download_queue.put((self.local_dir, file_name, row_count))
+            # 插入任务序号
+            download_no = QTableWidgetItem(str(self.download_no))
+            self.ui.DownloadList.setItem(row_count, 0, download_no)
+
             # 插入文件名
             file_name_qt = QTableWidgetItem(file_name)
-            self.ui.DownloadList.setItem(row_count, 0, file_name_qt)
-            self.ui.DfileName.setText(file_name)
+            self.ui.DownloadList.setItem(row_count, 1, file_name_qt)
+            self.ui.DfileName.setText(str(self.download_no)+'.'+file_name)
+
+            self.download_no += 1
+
             # 插入开始时间
             start_time = QTableWidgetItem(time.asctime())
-            self.ui.DownloadList.setItem(row_count, 2, start_time)
+            self.ui.DownloadList.setItem(row_count, 3, start_time)
             # 插入文件大小
             file_size = self.ftpuser.get_size_format(self.ftpserver.size(file_name))
             file_size = QTableWidgetItem(file_size)
-            self.ui.DownloadList.setItem(row_count, 1, file_size)
+            self.ui.DownloadList.setItem(row_count, 2, file_size)
 
             if self.download_thread is None or not self.download_thread.is_alive():
                 self.download_thread = threading.Thread(target=lambda: self._download())
@@ -254,10 +281,19 @@ class Client:
             QMessageBox.warning(self.ui, 'warning', '请先选择保存位置！')
             pass
 
+    def download_resume(self):
+        assert self.download_closing_event.is_set()
+        self.download_closing_event.clear()
+        assert self.download_thread is not None
+        assert not self.download_thread.is_alive()
+        self.download_thread = threading.Thread(target=lambda: self._download())
+        self.download_thread.setDaemon(True)
+        self.download_thread.start()
+
     def _download(self):
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
         while not self.download_queue.empty():
-            local_dir, file_name, row_count = self.download_queue.get()
+            local_dir, file_name, row_count = self.download_queue.queue[0]
             assert local_dir is not None
             assert file_name is not None
             remote_path = file_name
@@ -290,6 +326,11 @@ class Client:
                     if cur_size == target_size:
                         end_time = QTableWidgetItem(time.asctime())
 
+            if self.download_closing_event.is_set():
+                break
+
+            self.download_queue.get()   # 从队列中删除
+
             print(f'{file_name}已下载完成！')
 
             # 下载完成，该任务的target_size = 0
@@ -297,7 +338,7 @@ class Client:
             self.cur_download_size = 0
 
             # 插入结束时间
-            self.ui.DownloadList.setItem(row_count, 3, end_time)
+            self.ui.DownloadList.setItem(row_count, 4, end_time)
 
     def upload_callback(self, buf):
         # this function is called on each block of data after it is sent.
@@ -319,17 +360,24 @@ class Client:
 
             self.upload_queue.put((self.local_file, file_name, row_count))
 
+            # 插入任务序号
+            upload_no = QTableWidgetItem(str(self.upload_no))
+            self.ui.UploadList.setItem(row_count, 0, upload_no)
+
+            # 插入文件名
             file_name_qt = QTableWidgetItem(file_name)
-            self.ui.UploadList.setItem(row_count, 0, file_name_qt)
-            self.ui.UfileName.setText(file_name)
+            self.ui.UploadList.setItem(row_count, 1, file_name_qt)
+            self.ui.UfileName.setText(str(self.upload_no)+'.'+file_name)
+
+            self.upload_no += 1
 
             # 插入开始时间
             start_time = QTableWidgetItem(time.asctime())
-            self.ui.UploadList.setItem(row_count, 2, start_time)
+            self.ui.UploadList.setItem(row_count, 3, start_time)
 
             target_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
             target_size = QTableWidgetItem(target_size)
-            self.ui.UploadList.setItem(row_count, 1, target_size)
+            self.ui.UploadList.setItem(row_count, 2, target_size)
 
             if self.upload_thread is None or not self.upload_thread.is_alive():
                 self.upload_thread = threading.Thread(target=lambda: self._upload())
@@ -341,11 +389,20 @@ class Client:
             QMessageBox.warning(self.ui, 'warning', '请先选择上传的文件！')
             pass
 
+    def upload_resume(self):
+        assert self.upload_closing_event.is_set()
+        self.upload_closing_event.clear()
+        assert self.upload_thread is not None
+        assert not self.upload_thread.is_alive()
+        self.upload_thread = threading.Thread(target=lambda: self._upload())
+        self.upload_thread.setDaemon(True)
+        self.upload_thread.start()
+
     def _upload(self):
         # NOTE: 已经transWin界面加入到主窗口，调用时由self.trans变为self.ui
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
         while not self.upload_queue.empty():
-            local_path, file_name, row_count = self.upload_queue.get()
+            local_path, file_name, row_count = self.upload_queue.queue[0]
             assert os.path.exists(local_path)  # 本地文件路径
 
             remote_path = file_name
@@ -359,10 +416,15 @@ class Client:
             thread.setDaemon(True)
             thread.start()
             thread.join()
-            end_time = QTableWidgetItem(time.asctime())
-            print(3)
 
-            self.ui.UploadList.setItem(row_count, 3, end_time)
+            if self.upload_closing_event.is_set():  # 终止上传
+                break
+
+            self.upload_queue.get()  # 从队列中删除
+            end_time = QTableWidgetItem(time.asctime())
+            print('removing {} from upload queue'.format(file_name))
+
+            self.ui.UploadList.setItem(row_count, 4, end_time)
             self.refresh_dir()
             # 上传完成，任务的upload_count清零
             self.target_upload_count = 0
@@ -446,7 +508,7 @@ class Client:
 
             # 启用disconnect button
             self.ui.disconnectBtn.setDisabled(False)
-            # x = 1 / 0  # debug use
+            self.remote_dir = self.ftpserver.pwd()
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
@@ -462,6 +524,11 @@ class Client:
         self.ui.serverLbl.setText('远程目录列表（未连接）：')
         self.ftpserver.quit()
         self.ftpserver = None
+        self.remote_dir = None
+
+        # 禁用上传下载按钮
+        self.ui.ulButton.setDisabled(True)
+        self.ui.dButton.setDisabled(True)
         # 清空远程目录
         self.ui.tableWidget.setRowCount(0)
         self.ui.tableWidget.clearContents()
@@ -544,9 +611,108 @@ class Client:
             self.ui.dButton.setEnabled(True)  # 下载按键允许
         return
 
-    def trans_list(self):
-        self.ui.setWindowTitle('Transmission List')
-        self.ui.show()
+    '''
+       因为存在队列
+      上传和下载列表中的删除：只能删除已完成的任务
+      上传下载列表中的暂停：只能暂停当前的任务
+       上传下载列表中的继续：只能继续当前的任务
+    '''
+    def upload_selected(self):
+        selected_row = self.ui.UploadList.selectedItems()[0].row()
+        self.ui.DeleteUploadBtn.setEnabled(True)
+        if self.ui.ContinueUploadBtn.isEnabled():
+            pass
+        else:
+            if self.ui.UploadList.item(selected_row, 4) is None:  # 未上传完毕
+                if self.ui.UploadList.item(selected_row, 0).text() == self.ui.UfileName.text().split('.')[0]: # 如果当前选中的文件正在上传
+                    self.ui.PauseUploadBtn.setEnabled(True)
+                    self.ui.ContinueUploadBtn.setEnabled(False)
+                else:
+                    self.ui.PauseUploadBtn.setEnabled(False)
+                    self.ui.ContinueUploadBtn.setEnabled(False)
+            else:
+                self.ui.PauseUploadBtn.setEnabled(False)
+                self.ui.ContinueUploadBtn.setEnabled(False)
+
+    def delete_upload(self):
+        try:
+            selected_row = self.ui.UploadList.selectedItems()[0].row()
+        except IndexError:
+            self.ui.DeleteUploadBtn.setEnabled(False)
+            QMessageBox.warning(self.ui, 'warning', '当前已无上传任务！')
+            return
+        if self.ui.UploadList.item(selected_row, 4) is None: # 未上传完毕
+            if self.ui.PauseUploadBtn.isEnabled():  # 当前正在上传，但是要删除
+                self.pause_upload() # 暂停上传然后删除
+            else:
+                pass
+        else:
+            pass
+        self.ui.UploadList.removeRow(selected_row)
+        self.ui.PauseUploadBtn.setEnabled(False)
+        self.ui.ContinueUploadBtn.setEnabled(False)
+
+    def pause_upload(self):
+        self.ftpserver.abort()
+        self.upload_closing_event.set()
+        self.ui.PauseUploadBtn.setEnabled(False)
+        self.upload_thread.join()
+        self.ui.ContinueUploadBtn.setEnabled(True)
+
+    def continue_upload(self):
+        self.ui.PauseUploadBtn.setEnabled(True)
+        self.ui.ContinueUploadBtn.setEnabled(False)
+        self.upload_resume()
+
+    def download_selected(self):
+        selected_row = self.ui.DownloadList.selectedItems()[0].row()
+        self.ui.DeleteDownloadBtn.setEnabled(True)
+        if self.ui.ContinueDownloadBtn.isEnabled():  # 当前处于暂停状态
+            pass
+        else:
+            if self.ui.DownloadList.item(selected_row, 4) is None:
+                if self.ui.DownloadList.item(selected_row, 0).text() == self.ui.DfileName.text().split('.')[0]:
+                    self.ui.PauseDownloadBtn.setEnabled(True)
+                    self.ui.ContinueDownloadBtn.setEnabled(False)
+                else:
+                    self.ui.PauseDownloadBtn.setEnabled(False)
+                    self.ui.ContinueDownloadBtn.setEnabled(False)
+            else:
+                self.ui.PauseDownloadBtn.setEnabled(False)
+                self.ui.ContinueDownloadBtn.setEnabled(False)
+
+    def delete_download(self):
+        try:
+            selected_row = self.ui.DownloadList.selectedItems()[0].row()
+        except IndexError:
+            self.ui.DeleteDownloadBtn.setEnabled(False)
+            QMessageBox.warning(self.ui, 'warning', '当前已无下载任务！')
+            return
+        if self.ui.DownloadList.item(selected_row, 4) is None:  # 未下载完毕
+            if self.ui.PauseDownloadBtn.isEnabled():
+                self.pause_download()
+            else:
+                pass
+        else:
+            pass
+        self.ui.DownloadList.removeRow(selected_row)
+        self.ui.PauseDownloadBtn.setEnabled(False)
+        self.ui.ContinueDownloadBtn.setEnabled(False)
+
+    def pause_download(self):
+        self.ftpserver.abort()
+        self.download_closing_event.set()
+        self.ui.PauseDownloadBtn.setEnabled(False)
+        self.download_thread.join()
+        self.ui.ContinueDownloadBtn.setEnabled(True)
+
+    def continue_download(self):
+        self.ui.PauseDownloadBtn.setEnabled(True)
+        self.ui.ContinueDownloadBtn.setEnabled(False)
+        self.download_resume()
+
+
+
 
 
 app = QApplication([])
