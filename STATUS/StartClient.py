@@ -55,7 +55,7 @@ class LoginWin(QDialog, Ui_loginForm):
         self.setupUi(self)
         self.closeBtn.clicked.connect(self.close)
         self.delBtn.setEnabled(False)
-
+        self.connectBtn.setEnabled(False)
         # 获取上次的config
         with open('cache/config_client.json', "r") as f:
             data = f.read()
@@ -175,7 +175,7 @@ class Client:
         self.modelt.setRootPath(self.client_root)
         self.loginWin.NewBtn.clicked.connect(self.NewSessionList) #新建会话
         self.loginWin.sessionTbl.cellClicked.connect(self.deleteOpetion)  # 单击文件打开
-        self.loginWin.delBtn.clicked.connect(self.deleteRow) #删除行
+        self.loginWin.delBtn.clicked.connect(self.select_row) #激活新建和删除
         self.NewSession.Confirm.clicked.connect(self.AddData) #添加数据到login
 
         # 左侧本地文件树设置
@@ -779,11 +779,12 @@ class Client:
             else:
                 QMessageBox.warning(self.ui, 'warning', '主机格式不正确！')
 
-
-    def deleteOpetion(self):
+                
+    def select_row(self):
         self.loginWin.delBtn.setEnabled(True)
+        self.loginWin.connectBtn.setEnabled(True)
 
-
+        
     def deleteRow(self):
         row = self.loginWin.sessionTbl.currentRow()
         self.loginWin.sessionTbl.removeRow(row)
