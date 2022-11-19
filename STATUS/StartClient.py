@@ -59,21 +59,14 @@ class LoginWin(QDialog, Ui_loginForm):
         # 获取上次的config
         with open('cache/config_client.json', "r") as f:
             data = f.read()
-            if len(data) == 0:
-                config = [] #用列表存储多个连接信息
-            else:
-                config = json.loads(data)
-            for line in config:
-                currentRowCount = self.sessionTbl.rowCount()
-                self.sessionTbl.insertRow(currentRowCount)
-                self.sessionTbl.setItem(currentRowCount, 0, QTableWidgetItem(line['name']))
+        config = json.loads(data)
+        self.config = config
 
-                self.sessionTbl.setItem(currentRowCount, 1, QTableWidgetItem(line['username']))
-                self.sessionTbl.setItem(currentRowCount, 2, QTableWidgetItem("FTP"))
-                self.sessionTbl.setItem(currentRowCount, 3, QTableWidgetItem(line['port']))
-                self.sessionTbl.setItem(currentRowCount, 4, QTableWidgetItem(line['domain']))
-                self.sessionTbl.setItem(currentRowCount, 5, QTableWidgetItem(line['password']))
-                self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
+        self.sessionTbl.insertRow(0)
+        for col, text in enumerate(config.values()):
+            self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
+
+        self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
 
         self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)#设置登录界面信息只读
 
@@ -273,30 +266,35 @@ class Client:
             print(e)
 
     def download(self):
-        if self.local_dir:
-            file_name = self.ui.tableWidget.selectedItems()[0].text()
-            row_count = self.ui.DownloadList.rowCount()  # 当前行数
-            self.ui.DownloadList.insertRow((int(row_count)))  # 当前行后插入
+        if self.local_dir or self.download_closing_event.is_set():
+            if self.download_closing_event.is_set():
+                self.download_closing_event.clear()
+                assert self.download_thread is not None
+                assert not self.download_thread.is_alive()
+            else:
+                file_name = self.ui.tableWidget.selectedItems()[0].text()
+                row_count = self.ui.DownloadList.rowCount()  # 当前行数
+                self.ui.DownloadList.insertRow((int(row_count)))  # 当前行后插入
 
-            self.download_queue.put((self.local_dir, file_name, row_count))
-            # 插入任务序号
-            download_no = QTableWidgetItem(str(self.download_no))
-            self.ui.DownloadList.setItem(row_count, 0, download_no)
+                self.download_queue.put((self.local_dir, file_name, row_count))
+                # 插入任务序号
+                download_no = QTableWidgetItem(str(self.download_no))
+                self.ui.DownloadList.setItem(row_count, 0, download_no)
 
-            # 插入文件名
-            file_name_qt = QTableWidgetItem(file_name)
-            self.ui.DownloadList.setItem(row_count, 1, file_name_qt)
-            self.ui.DfileName.setText(str(self.download_no)+'.'+file_name)
+                # 插入文件名
+                file_name_qt = QTableWidgetItem(file_name)
+                self.ui.DownloadList.setItem(row_count, 1, file_name_qt)
+                self.ui.DfileName.setText(str(self.download_no)+'.'+file_name)
 
-            self.download_no += 1
+                self.download_no += 1
 
-            # 插入开始时间
-            start_time = QTableWidgetItem(time.asctime())
-            self.ui.DownloadList.setItem(row_count, 3, start_time)
-            # 插入文件大小
-            file_size = self.ftpuser.get_size_format(self.ftpserver.size(file_name))
-            file_size = QTableWidgetItem(file_size)
-            self.ui.DownloadList.setItem(row_count, 2, file_size)
+                # 插入开始时间
+                start_time = QTableWidgetItem(time.asctime())
+                self.ui.DownloadList.setItem(row_count, 3, start_time)
+                # 插入文件大小
+                file_size = self.ftpuser.get_size_format(self.ftpserver.size(file_name))
+                file_size = QTableWidgetItem(file_size)
+                self.ui.DownloadList.setItem(row_count, 2, file_size)
 
             if self.download_thread is None or not self.download_thread.is_alive():
                 self.download_thread = threading.Thread(target=lambda: self._download())
@@ -308,14 +306,6 @@ class Client:
             QMessageBox.warning(self.ui, 'warning', '请先选择保存位置！')
             pass
 
-    def download_resume(self):
-        assert self.download_closing_event.is_set()
-        self.download_closing_event.clear()
-        assert self.download_thread is not None
-        assert not self.download_thread.is_alive()
-        self.download_thread = threading.Thread(target=lambda: self._download())
-        self.download_thread.setDaemon(True)
-        self.download_thread.start()
 
     def _download(self):
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
@@ -354,7 +344,7 @@ class Client:
                         end_time = QTableWidgetItem(time.asctime())
 
             if self.download_closing_event.is_set():
-                break
+                return
 
             self.download_queue.get()   # 从队列中删除
 
@@ -378,33 +368,38 @@ class Client:
         self.upload_progressChanged.update_progress(pv_upload)
 
     def upload(self):
-        if self.local_file:
-            # 在传输列表中插入一行
-            row_count = self.ui.UploadList.rowCount()  # 当前行数
-            self.ui.UploadList.insertRow(int(row_count))  # 当前行后插入
+        if self.local_file or self.upload_closing_event.is_set():
+            if self.upload_closing_event.is_set():
+                self.upload_closing_event.clear()
+                assert self.upload_thread is not None
+                assert not self.upload_thread.is_alive()
+            else:
+                # 在传输列表中插入一行
+                row_count = self.ui.UploadList.rowCount()  # 当前行数
+                self.ui.UploadList.insertRow(int(row_count))  # 当前行后插入
 
-            file_name = os.path.split(self.local_file)[1]
+                file_name = os.path.split(self.local_file)[1]
 
-            self.upload_queue.put((self.local_file, file_name, row_count))
+                self.upload_queue.put((self.local_file, file_name, row_count))
 
-            # 插入任务序号
-            upload_no = QTableWidgetItem(str(self.upload_no))
-            self.ui.UploadList.setItem(row_count, 0, upload_no)
+                # 插入任务序号
+                upload_no = QTableWidgetItem(str(self.upload_no))
+                self.ui.UploadList.setItem(row_count, 0, upload_no)
 
-            # 插入文件名
-            file_name_qt = QTableWidgetItem(file_name)
-            self.ui.UploadList.setItem(row_count, 1, file_name_qt)
-            self.ui.UfileName.setText(str(self.upload_no)+'.'+file_name)
+                # 插入文件名
+                file_name_qt = QTableWidgetItem(file_name)
+                self.ui.UploadList.setItem(row_count, 1, file_name_qt)
+                self.ui.UfileName.setText(str(self.upload_no)+'.'+file_name)
 
-            self.upload_no += 1
+                self.upload_no += 1
 
-            # 插入开始时间
-            start_time = QTableWidgetItem(time.asctime())
-            self.ui.UploadList.setItem(row_count, 3, start_time)
+                # 插入开始时间
+                start_time = QTableWidgetItem(time.asctime())
+                self.ui.UploadList.setItem(row_count, 3, start_time)
 
-            target_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
-            target_size = QTableWidgetItem(target_size)
-            self.ui.UploadList.setItem(row_count, 2, target_size)
+                target_size = self.ftpuser.get_size_format(os.path.getsize(self.local_file))
+                target_size = QTableWidgetItem(target_size)
+                self.ui.UploadList.setItem(row_count, 2, target_size)
 
             if self.upload_thread is None or not self.upload_thread.is_alive():
                 self.upload_thread = threading.Thread(target=lambda: self._upload())
@@ -416,14 +411,6 @@ class Client:
             QMessageBox.warning(self.ui, 'warning', '请先选择上传的文件！')
             pass
 
-    def upload_resume(self):
-        assert self.upload_closing_event.is_set()
-        self.upload_closing_event.clear()
-        assert self.upload_thread is not None
-        assert not self.upload_thread.is_alive()
-        self.upload_thread = threading.Thread(target=lambda: self._upload())
-        self.upload_thread.setDaemon(True)
-        self.upload_thread.start()
 
     def _upload(self):
         # NOTE: 已经transWin界面加入到主窗口，调用时由self.trans变为self.ui
@@ -445,7 +432,7 @@ class Client:
             thread.join()
 
             if self.upload_closing_event.is_set():  # 终止上传
-                break
+                return
 
             self.upload_queue.get()  # 从队列中删除
             end_time = QTableWidgetItem(time.asctime())
@@ -549,7 +536,10 @@ class Client:
         self.ui.disconnectBtn.setDisabled(True)
         self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(128, 128, 128, 200);")
         self.ui.serverLbl.setText('远程目录列表（未连接）：')
-        self.ftpserver.quit()
+        try:
+            self.ftpserver.quit()
+        except ConnectionAbortedError:
+            pass
         self.ftpserver = None
         self.remote_dir = None
 
@@ -680,8 +670,8 @@ class Client:
         self.ui.ContinueUploadBtn.setEnabled(False)
 
     def pause_upload(self):
-        self.ftpserver.abort()
         self.upload_closing_event.set()
+        self.ftpserver.abort()
         self.ui.PauseUploadBtn.setEnabled(False)
         self.upload_thread.join()
         self.ui.ContinueUploadBtn.setEnabled(True)
@@ -689,7 +679,7 @@ class Client:
     def continue_upload(self):
         self.ui.PauseUploadBtn.setEnabled(True)
         self.ui.ContinueUploadBtn.setEnabled(False)
-        self.upload_resume()
+        self.upload()
 
     def download_selected(self):
         selected_row = self.ui.DownloadList.selectedItems()[0].row()
@@ -727,8 +717,8 @@ class Client:
         self.ui.ContinueDownloadBtn.setEnabled(False)
 
     def pause_download(self):
-        self.ftpserver.abort()
         self.download_closing_event.set()
+        self.ftpserver.abort()
         self.ui.PauseDownloadBtn.setEnabled(False)
         self.download_thread.join()
         self.ui.ContinueDownloadBtn.setEnabled(True)
@@ -736,7 +726,7 @@ class Client:
     def continue_download(self):
         self.ui.PauseDownloadBtn.setEnabled(True)
         self.ui.ContinueDownloadBtn.setEnabled(False)
-        self.download_resume()
+        self.download()
 
 
     def NewSessionList(self):

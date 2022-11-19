@@ -212,7 +212,10 @@ class FTP_user:
                 buf = fp.read(blocksize)
                 if not buf:
                     break
-                conn.sendall(buf)
+                try:
+                    conn.sendall(buf)
+                except ConnectionResetError:
+                    break
                 if callback:
                     callback(buf)
         return self.voidresp()
