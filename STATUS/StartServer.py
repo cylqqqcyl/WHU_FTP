@@ -235,7 +235,7 @@ class Server:
             self.server.close_server()
             self.server = None
         self.mainWin.nameEdit.setText('')
-        self.mainWin.addressEdit.setText('')
+        # self.mainWin.addressEdit.setText('')
         self.mainWin.portEdit.setText('')
         self.mainWin.rootEdit.setText('')
         self.mainWin.dbEdit.setText('')
