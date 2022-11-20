@@ -155,7 +155,7 @@ class WHUFTPClient:
         ftp.connect(self.host, self.port)
         ftp.login(self.username, self.password)
         ftp.set_pasv(False)
-        print(ftp.getwelcome())
+        # print(ftp.getwelcome())
 
         return ftp
 
