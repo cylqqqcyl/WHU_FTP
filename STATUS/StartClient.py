@@ -123,8 +123,8 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         self.name = ''
 
         # transmission log
-        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
-        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+        sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
 
     def saveConfig(self):
         name = self.name
@@ -828,9 +828,7 @@ class Client:
 
     def deleteRow(self):
         row = self.loginWin.sessionTbl.currentRow()
-        print(1)
         self.loginWin.sessionTbl.removeRow(row)
-        print(2)
         self.loginWin.delBtn.setEnabled(False)
         with open('cache/config_client.json', mode='r', encoding='utf-8') as f:
             data = f.read()
