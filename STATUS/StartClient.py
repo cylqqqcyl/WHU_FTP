@@ -12,7 +12,6 @@ import time
 from src.ClientServer import WHUFTPClient
 from client import Ui_MainWindow
 from login import Ui_loginForm
-from Transmission import Ui_Form
 
 from NewLogin import NewLogin_Form
 
@@ -68,7 +67,7 @@ class LoginWin(QDialog, Ui_loginForm):
 
         self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
 
-        self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)#设置登录界面信息只读
+        self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 设置登录界面信息只读
 
     def get_selected_row(self):
         row = self.sessionTbl.currentIndex().row()
@@ -80,7 +79,7 @@ class LoginWin(QDialog, Ui_loginForm):
         return user, port, host, password
 
 
-class NewLogin(QDialog,NewLogin_Form):
+class NewLogin(QDialog, NewLogin_Form):
     def __init__(self, parent=None):
         super(NewLogin, self).__init__(parent)
 
@@ -101,6 +100,7 @@ class ClientUI(QMainWindow, Ui_MainWindow):
         sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
         sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
 
+        self.is_resp = False  # 下一个输出是一条ftp指令的response
 
     def saveConfig(self):
         name = 'whuftp'
@@ -121,8 +121,10 @@ class ClientUI(QMainWindow, Ui_MainWindow):
             with open('cache/config_client.json', 'w') as f:
                 f.write(data)
 
-    def outputWriteInfo(self, text):
-        self.textBrowser.append(text)
+    def outputWriteInfo(self, text: str):
+        if text.startswith('<out>'):
+            text = text.strip('<out>')
+            self.textBrowser.append(text)
 
     def outputWriteError(self, text):
         # 错误信息用红色输出
@@ -152,12 +154,10 @@ class Client:
 
         self.ftpserver = None  # 所连接到的服务器实例
         self.current_remote_dir = None  # 当前服务器目录
-        self.NewSession = NewLogin() #新建会话
+        self.NewSession = NewLogin()  # 新建会话
         self.NewSession.setWindowTitle('New Session')
         self.loginWin = LoginWin()
         self.ui = ClientUI()
-        # self.trans = TransWin()  # 传输窗口
-        # self.ui.button.clicked.connect(self.handleCalc)
 
         # signal slots
         self.ui.eButton.clicked.connect(self.exit)  # 退出按键操作
@@ -173,10 +173,10 @@ class Client:
         self.client_root = 'home'
         self.modelt = QFileSystemModel()
         self.modelt.setRootPath(self.client_root)
-        self.loginWin.NewBtn.clicked.connect(self.NewSessionList) #新建会话
-        self.loginWin.sessionTbl.cellClicked.connect(self.deleteOpetion)  # 单击文件打开
-        self.loginWin.delBtn.clicked.connect(self.select_row) #激活新建和删除
-        self.NewSession.Confirm.clicked.connect(self.AddData) #添加数据到login
+        self.loginWin.NewBtn.clicked.connect(self.NewSessionList)  # 新建会话
+        self.loginWin.sessionTbl.cellClicked.connect(self.select_row)  # 单击文件打开
+        self.loginWin.delBtn.clicked.connect(self.select_row)  # 激活新建和删除
+        self.NewSession.Confirm.clicked.connect(self.AddData)  # 添加数据到login
 
         # 左侧本地文件树设置
         self.ui.treeView.setModel(self.modelt)
@@ -284,7 +284,7 @@ class Client:
                 # 插入文件名
                 file_name_qt = QTableWidgetItem(file_name)
                 self.ui.DownloadList.setItem(row_count, 1, file_name_qt)
-                self.ui.DfileName.setText(str(self.download_no)+'.'+file_name)
+                self.ui.DfileName.setText(str(self.download_no) + '.' + file_name)
 
                 self.download_no += 1
 
@@ -305,7 +305,6 @@ class Client:
         else:
             QMessageBox.warning(self.ui, 'warning', '请先选择保存位置！')
             pass
-
 
     def _download(self):
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
@@ -346,9 +345,9 @@ class Client:
             if self.download_closing_event.is_set():
                 return
 
-            self.download_queue.get()   # 从队列中删除
+            self.download_queue.get()  # 从队列中删除
 
-            print(f'{file_name}已下载完成！')
+            print(f'<out>{file_name}已下载完成！')
 
             # 下载完成，该任务的target_size = 0
             self.target_download_size = 0
@@ -366,6 +365,9 @@ class Client:
         except ZeroDivisionError:
             pv_upload = 100
         self.upload_progressChanged.update_progress(pv_upload)
+
+        # if self.cur_upload_count == self.target_upload_count:
+        # self.upload_progressChanged.update_progress(0)
 
     def upload(self):
         if self.local_file or self.upload_closing_event.is_set():
@@ -389,7 +391,7 @@ class Client:
                 # 插入文件名
                 file_name_qt = QTableWidgetItem(file_name)
                 self.ui.UploadList.setItem(row_count, 1, file_name_qt)
-                self.ui.UfileName.setText(str(self.upload_no)+'.'+file_name)
+                self.ui.UfileName.setText(str(self.upload_no) + '.' + file_name)
 
                 self.upload_no += 1
 
@@ -411,9 +413,7 @@ class Client:
             QMessageBox.warning(self.ui, 'warning', '请先选择上传的文件！')
             pass
 
-
     def _upload(self):
-        # NOTE: 已经transWin界面加入到主窗口，调用时由self.trans变为self.ui
         # 远程目录自动切换，不需要再在本地文件名前加上远程目录
         while not self.upload_queue.empty():
             local_path, file_name, row_count = self.upload_queue.queue[0]
@@ -436,7 +436,7 @@ class Client:
 
             self.upload_queue.get()  # 从队列中删除
             end_time = QTableWidgetItem(time.asctime())
-            print('removing {} from upload queue'.format(file_name))
+            print('<out>{}已上传完成！'.format(file_name))
 
             self.ui.UploadList.setItem(row_count, 4, end_time)
             self.refresh_dir()
@@ -478,7 +478,6 @@ class Client:
             self.ui.domainEdit.setText(host)
             self.ui.pwEdit.setText(password)
             self.loginWin.close()
-
 
     def connect_server(self):
 
@@ -529,6 +528,9 @@ class Client:
             # 启用disconnect button
             self.ui.disconnectBtn.setDisabled(False)
             self.remote_dir = self.ftpserver.pwd()
+
+            print('<out>成功连接至远程目录！')
+
         except Exception as e:
             self.ui.serverLbl.setStyleSheet("color: rgb(255, 255, 255); background-color: rgba(255, 0, 0, 200);")
             self.ui.serverLbl.setText('远程目录列表（连接失败！）：')
@@ -640,6 +642,7 @@ class Client:
       上传下载列表中的暂停：只能暂停当前的任务
        上传下载列表中的继续：只能继续当前的任务
     '''
+
     def upload_selected(self):
         selected_row = self.ui.UploadList.selectedItems()[0].row()
         self.ui.DeleteUploadBtn.setEnabled(True)
@@ -647,7 +650,7 @@ class Client:
             pass
         else:
             if self.ui.UploadList.item(selected_row, 4) is None:  # 未上传完毕
-                if self.ui.UploadList.item(selected_row, 0).text() == self.ui.UfileName.text().split('.')[0]: # 如果当前选中的文件正在上传
+                if self.ui.UploadList.item(selected_row, 0).text() == self.ui.UfileName.text().split('.')[0]:  # 如果当前选中的文件正在上传
                     self.ui.PauseUploadBtn.setEnabled(True)
                     self.ui.ContinueUploadBtn.setEnabled(False)
                 else:
@@ -664,9 +667,9 @@ class Client:
             self.ui.DeleteUploadBtn.setEnabled(False)
             QMessageBox.warning(self.ui, 'warning', '当前已无上传任务！')
             return
-        if self.ui.UploadList.item(selected_row, 4) is None: # 未上传完毕
+        if self.ui.UploadList.item(selected_row, 4) is None:  # 未上传完毕
             if self.ui.PauseUploadBtn.isEnabled():  # 当前正在上传，但是要删除
-                self.pause_upload() # 暂停上传然后删除
+                self.pause_upload()  # 暂停上传然后删除
             else:
                 pass
         else:
@@ -734,10 +737,8 @@ class Client:
         self.ui.ContinueDownloadBtn.setEnabled(False)
         self.download()
 
-
     def NewSessionList(self):
         self.NewSession.exec_()
-
 
     def AddData(self):
         name = self.NewSession.Name.text()
@@ -746,31 +747,33 @@ class Client:
         host = self.NewSession.Host_2.text()
         port = self.NewSession.Port.text()
 
-        if len(name) == 0 or len(username) == 0 or len(password) ==0 or len(host) ==0 or len(port) == 0:
+        if len(name) == 0 or len(username) == 0 or len(password) == 0 or len(host) == 0 or len(port) == 0:
             QMessageBox.warning(self.ui, 'warning', '请补全连接！')
 
         else:
             ip = host.split('.')
-            if len(ip) == 4 and ip[0].isdigit() and int(ip[0]) in range(0,255) and ip[1].isdigit() and int(ip[1]) in range(0,255) and ip[2].isdigit() and int(ip[2]) in range(0,255) and ip[3].isdigit() and int(ip[3]) in range(0,255):
-                dict = {"name": "whuftp", "username": username, "protocol": "FTP", "port": port, "domain": host, "password": password}
+            if len(ip) == 4 and ip[0].isdigit() and int(ip[0]) in range(0, 255) and ip[1].isdigit() and int(
+                    ip[1]) in range(0, 255) and ip[2].isdigit() and int(ip[2]) in range(0, 255) and ip[
+                3].isdigit() and int(ip[3]) in range(0, 255):
+                dict = {"name": "whuftp", "username": username, "protocol": "FTP", "port": port, "domain": host,
+                        "password": password}
                 with open('cache/config_client.json', mode='r', encoding='utf-8') as f:
                     data = f.read()
-                list= []
-                if not len(data)==0:
+                list = []
+                if not len(data) == 0:
                     list = json.loads(data)
                 list.append(dict)
-                print(list)
                 with open('cache/config_client.json', mode='w', encoding='utf-8') as f:
-                    json.dump(list, f)      #将数据保存到json里
+                    json.dump(list, f)  # 将数据保存到json里
                 currentRowCount = self.loginWin.sessionTbl.rowCount()
-                self.loginWin.sessionTbl.insertRow(currentRowCount) #将页面的数据插入到login中
+                self.loginWin.sessionTbl.insertRow(currentRowCount)  # 将页面的数据插入到login中
                 self.loginWin.sessionTbl.setItem(currentRowCount, 0, QTableWidgetItem(name))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 1, QTableWidgetItem(username))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 2, QTableWidgetItem("FTP"))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 3, QTableWidgetItem(port))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 4, QTableWidgetItem(host))
                 self.loginWin.sessionTbl.setItem(currentRowCount, 5, QTableWidgetItem(password))
-                self.NewSession.Name.clear() #清空之前的输入
+                self.NewSession.Name.clear()  # 清空之前的输入
                 self.NewSession.User.clear()
                 self.NewSession.Port.clear()
                 self.NewSession.Host.clear()
@@ -779,12 +782,10 @@ class Client:
             else:
                 QMessageBox.warning(self.ui, 'warning', '主机格式不正确！')
 
-                
     def select_row(self):
         self.loginWin.delBtn.setEnabled(True)
         self.loginWin.connectBtn.setEnabled(True)
 
-        
     def deleteRow(self):
         row = self.loginWin.sessionTbl.currentRow()
         self.loginWin.sessionTbl.removeRow(row)
@@ -799,8 +800,10 @@ class Client:
             json.dump(list, f)
 
 
-app = QApplication([])
-stats = Client()
-stats.loginWin.exec()
-stats.ui.show()
-sys.exit(app.exec())  # 安全结束
+if __name__ == '__main__':
+    app = QApplication([])
+    stats = Client()
+    print('<out>欢迎使用WHU FTP！\n你可以连接至远程目录并上传和下载文件！')
+    stats.loginWin.exec()
+    stats.ui.show()
+    sys.exit(app.exec())  # 安全结束
