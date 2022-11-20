@@ -57,4 +57,6 @@ FTP的客户端封装在[ClientServer.py](https://github.com/cylqqqcyl/WHU_FTP/b
 
 ## Backend
 
-后端主要使用pyftpdlib进行实现，支持上传下载、断点续传等功能。
+后端主要使用pyftpdlib进行实现，支持上传下载、断点续传等功能。本次实验中，使用了pyftpdlib搭建FTP服务器端。
+
+断点续传主要是通过RFC959中FTP服务指令中的REST指令进行实现的。
