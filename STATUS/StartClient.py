@@ -120,8 +120,6 @@ class ClientUI(QMainWindow, Ui_MainWindow):
 
         self.loginWin = LoginWin()
 
-        self.name = ''
-
         # transmission log
         sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
         sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
