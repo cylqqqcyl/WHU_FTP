@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class NewLogin_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(550,900)
+        Form.resize(326, 516)
         Form.setStyleSheet("background-color:qlineargradient(x1:0, y1:1, x0:0, y0:1,stop:0 rgb(170, 150, 50),stop:0.2 rgb(83, 50, 41) ,stop:1 rgb(94, 80, 69));\n"
 "border-radius:30px;\n"
 "")

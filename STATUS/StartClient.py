@@ -1,6 +1,8 @@
 import math
 import threading
 import json
+import traceback
+
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -55,28 +57,50 @@ class LoginWin(QDialog, Ui_loginForm):
         self.closeBtn.clicked.connect(self.close)
         self.delBtn.setEnabled(False)
         self.connectBtn.setEnabled(False)
+
         # 获取上次的config
         with open('cache/config_client.json', "r") as f:
             data = f.read()
-        config = json.loads(data)
+
+        if len(data) == 0:
+            config = []  # 用列表存储多个连接信息
+        else:
+            config = json.loads(data)
+
         self.config = config
 
-        self.sessionTbl.insertRow(0)
-        for col, text in enumerate(config.values()):
-            self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
+        for line in config:
+            currentRowCount = self.sessionTbl.rowCount()
+            self.sessionTbl.insertRow(currentRowCount)
+            self.sessionTbl.setItem(currentRowCount, 0, QTableWidgetItem(line['name']))
+            self.sessionTbl.setItem(currentRowCount, 1, QTableWidgetItem(line['username']))
+            self.sessionTbl.setItem(currentRowCount, 2, QTableWidgetItem("FTP"))
+            self.sessionTbl.setItem(currentRowCount, 3, QTableWidgetItem(line['port']))
+            self.sessionTbl.setItem(currentRowCount, 4, QTableWidgetItem(line['domain']))
+            self.sessionTbl.setItem(currentRowCount, 5, QTableWidgetItem(line['password']))
+            self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
+            self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 设置登录界面信息只读
 
-        self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
 
-        self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 设置登录界面信息只读
+        # self.config = config
+        #
+        # self.sessionTbl.insertRow(0)
+        # for col, text in enumerate(config.values()):
+        #     self.sessionTbl.setItem(0, col, QTableWidgetItem(text))
+
+        # self.sessionTbl.setColumnHidden(5, True)  # 隐藏密码
+
+        # self.sessionTbl.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 设置登录界面信息只读
 
     def get_selected_row(self):
         row = self.sessionTbl.currentIndex().row()
+        name = self.sessionTbl.item(row, 0).text()
         user = self.sessionTbl.item(row, 1).text()
         port = self.sessionTbl.item(row, 3).text()
         host = self.sessionTbl.item(row, 4).text()
         password = self.sessionTbl.item(row, 5).text()
 
-        return user, port, host, password
+        return row, name, user, port, host, password
 
 
 class NewLogin(QDialog, NewLogin_Form):
@@ -96,30 +120,39 @@ class ClientUI(QMainWindow, Ui_MainWindow):
 
         self.loginWin = LoginWin()
 
-        # transmission log
-        sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
-        sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
+        self.name = ''
 
-        self.is_resp = False  # 下一个输出是一条ftp指令的response
+        # transmission log
+        # sys.stdout = EmitStr(textWrite=self.outputWriteInfo)  # redirect stdout
+        # sys.stderr = EmitStr(textWrite=self.outputWriteError)  # redirect stderr
 
     def saveConfig(self):
-        name = 'whuftp'
+        name = self.name
         username = self.nameEdit.text()
         protocol = 'FTP'
         port = self.portEdit.text()
         domain = self.domainEdit.text()
         password = self.pwEdit.text()
 
-        config = self.loginWin.config
-        values = [name, username, protocol, port, domain, password]
-        keys = config.keys()
-        for (key, value) in zip(keys, values):
-            if value:
-                config[key] = value
+        with open('cache/config_client.json', "r") as f:
+            data = f.read()
 
-            data = json.dumps(config)
-            with open('cache/config_client.json', 'w') as f:
-                f.write(data)
+        if len(data) == 0:
+            config = []  # 用列表存储多个连接信息
+        else:
+            config = json.loads(data)
+
+        values = [name, username, protocol, port, domain, password]
+        for line in config:
+            if line['username'] == username:
+                keys = line.keys()
+                for (key, value) in zip(keys, values):
+                    if value:
+                        line[key] = value
+
+        data = json.dumps(config)
+        with open('cache/config_client.json', 'w') as f:
+            f.write(data)
 
     def outputWriteInfo(self, text: str):
         if text.startswith('<out>'):
@@ -137,7 +170,10 @@ class ClientUI(QMainWindow, Ui_MainWindow):
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.saveConfig()
+            try:
+                self.saveConfig()
+            except:
+                traceback.print_exc()
             e.accept()
             sys.exit(0)
         else:
@@ -175,7 +211,7 @@ class Client:
         self.modelt.setRootPath(self.client_root)
         self.loginWin.NewBtn.clicked.connect(self.NewSessionList)  # 新建会话
         self.loginWin.sessionTbl.cellClicked.connect(self.select_row)  # 单击文件打开
-        self.loginWin.delBtn.clicked.connect(self.select_row)  # 激活新建和删除
+        self.loginWin.delBtn.clicked.connect(self.deleteRow)  # 激活新建和删除
         self.NewSession.Confirm.clicked.connect(self.AddData)  # 添加数据到login
 
         # 左侧本地文件树设置
@@ -461,7 +497,10 @@ class Client:
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.ui.saveConfig()
+            try:
+                self.ui.saveConfig()
+            except:
+                traceback.print_exc()
             sys.exit(0)  # 更正退出
         else:
             pass
@@ -471,8 +510,9 @@ class Client:
         if rowcount == 0:
             QMessageBox.warning(self.ui, 'warning', '请建立连接！')
         else:
-            user, port, host, password = self.loginWin.get_selected_row()
-
+            row, name, user, port, host, password = self.loginWin.get_selected_row()
+            self.ui.row = row
+            self.ui.name = name  # 连接名
             self.ui.nameEdit.setText(user)
             self.ui.portEdit.setText(port)
             self.ui.domainEdit.setText(host)
@@ -788,7 +828,9 @@ class Client:
 
     def deleteRow(self):
         row = self.loginWin.sessionTbl.currentRow()
+        print(1)
         self.loginWin.sessionTbl.removeRow(row)
+        print(2)
         self.loginWin.delBtn.setEnabled(False)
         with open('cache/config_client.json', mode='r', encoding='utf-8') as f:
             data = f.read()
