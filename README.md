@@ -20,6 +20,12 @@ pip install PyQt5
 本FTP服务器具有图形化界面，可验证登录，完成上传、下载功能，并实现断点续传功能。
 
 在界面中，用户可以同时看到本地文件和服务端文件，方便比对和传输。
+
+用户图形化界面基于PyQt5设计，包含登录界面、日志显示、本地文件和服务器文件显示、上传及下载进度显示等功能。本小组根据个人兴趣，定制了个性化的界面背景。
+
+FTP的实现主要基于Python中的Pyftplib和socket包，分别应用于服务器端和客户端，包括了创建并配置FTP服务器、用户上传下载文件等功能。并实现断点续传功能。
+
+FTP的客户端封装在[ClientServer.py](https://github.com/cylqqqcyl/WHU_FTP/blob/main/src/ClientServer.py)中的[WHUFTPClient](https://github.com/cylqqqcyl/WHU_FTP/blob/923c1112a63cbe18f58ae5e761253ecde383f6ae/src/ClientServer.py#L140)类中，主要函数如表所示。
 ### Frontend
 
 图形化界面
