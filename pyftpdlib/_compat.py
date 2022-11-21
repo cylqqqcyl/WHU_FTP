@@ -57,7 +57,7 @@ if PY3:
     FileExistsError = FileExistsError  # NOQA
 else:
     # https://github.com/PythonCharmers/python-future/blob/exceptions/
-    #     src/future/types/exceptions/pep3151.py
+    #     backend/future/types/exceptions/pep3151.py
     import platform
 
     def _instance_checking_exception(base_exception=Exception):
