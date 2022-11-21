@@ -1,0 +1,1 @@
+{"name": "whuftp", "port": "21", "root_dir": "user_dir", "db_path": "backend/user_info.db", "max_cons": "150", "max_cons_per_ip": "15", "read_limit": "300", "write_limit": "300"}

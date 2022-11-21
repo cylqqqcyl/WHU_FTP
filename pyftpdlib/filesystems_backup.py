@@ -289,7 +289,7 @@ class AbstractedFS(object):
         os.remove(path)
 
     def rename(self, src, dst):
-        """Rename the specified src file to the dst filename."""
+        """Rename the specified backend file to the dst filename."""
         assert isinstance(src, unicode), src
         assert isinstance(dst, unicode), dst
         os.rename(src, dst)
