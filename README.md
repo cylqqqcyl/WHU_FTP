@@ -32,7 +32,10 @@ pip install PyQt5
 
 FTP的实现主要基于Python中的Pyftplib和socket包，分别应用于服务器端和客户端，包括了创建并配置FTP服务器、用户上传下载文件等功能。并实现断点续传功能。
 
-FTP的客户端封装在[ClientServer.py](https://github.com/cylqqqcyl/WHU_FTP/blob/main/src/ClientServer.py)中的[WHUFTPClient](https://github.com/cylqqqcyl/WHU_FTP/blob/923c1112a63cbe18f58ae5e761253ecde383f6ae/src/ClientServer.py#L140)类中，主要函数如表所示。
+FTP的用户端封装在[WHUFTPClient.py](https://github.com/cylqqqcyl/WHU_FTP/blob/main/backend/WHUFTPClient.py)中的WHUFTPClient类中。
+
+FTP的服务端封装在[WHUFTPServer.py](https://github.com/cylqqqcyl/WHU_FTP/blob/main/backend/WHUFTPServer.py)中的WHUFTPServer类中。
+
 ### Frontend
 
 图形化界面
